@@ -1,0 +1,58 @@
+html {
+  overflow-y: scroll;
+  overscroll-behavior: none;
+}
+
+/* ── Mobile APP: Safe area cho Dynamic Island / Notch / Camera ── */
+html.mobile-app body {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+html.mobile-app body::before {
+  content: "";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background-color: var(--safe-area-bg, #F3F8FB);
+  z-index: 99999;
+  pointer-events: none;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+/* Chặn iOS auto-zoom khi focus vào input (iOS zoom khi font-size < 16px) */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* ── Toastify: nhỏ gọn chỉ trên mobile ── */
+@media (max-width: 768px) {
+  .Toastify__toast-container {
+    padding: 0 8px;
+    top: env(safe-area-inset-top, 8px) !important;
+  }
+
+  .Toastify__toast {
+    min-height: 40px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .Toastify__toast-body {
+    padding: 0;
+    margin: 0;
+  }
+
+  .Toastify__close-button {
+    align-self: center;
+  }
+}

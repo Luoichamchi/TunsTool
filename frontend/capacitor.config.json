@@ -1,0 +1,20 @@
+{
+  "appId": "com.example.app",
+  "appName": "myapp",
+  "webDir": "out",
+  "server": {
+    "url": "http://192.168.1.6:3000/",
+    "cleartext": true
+  },
+  "plugins": {
+    "Keyboard": {
+      "resizeOnFullScreen": false
+    },
+    "EdgeToEdge": {
+      "backgroundColor": "#ffffff",
+      "statusBarColor": "#ffffff",
+      "navigationBarColor": "#000000",
+      "lightStatusBar": true
+    }
+  }
+}

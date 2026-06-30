@@ -1,0 +1,47 @@
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.coverage
+coverage.xml
+htmlcov/
+pytest_cache/
+.mypy_cache/
+.pytest_cache/
+.pyright/
+logs/
+*.tmp
+*.sqlite3
+*.db
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic
+alembic/versions/*.pyc
+
+# Ignore test output
+*.coverage
+
+# Ignore local settings
+settings_local.py
+
+# Env files (use .env.example as template)
+.env
+.env.local
+
+# PyInstaller build output
+dist/
+build/
+run_app.spec

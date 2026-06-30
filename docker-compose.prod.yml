@@ -1,0 +1,44 @@
+services:
+
+  vimon_backend:
+    image: ${BACKEND_IMAGE}
+    container_name: vimon_backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
+      PORT: ${BACKEND_CONTAINER_PORT}
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${BACKEND_CONTAINER_PORT}/')"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - 1panel-network
+
+  vimon_frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: vimon_frontend
+    restart: always
+    depends_on:
+      vimon_backend:
+        condition: service_healthy
+    environment:
+      API_BASE_URL: http://vimon_backend:${BACKEND_CONTAINER_PORT}
+      MQTT_SERVER: ${MQTT_SERVER}
+      PORT: ${FRONTEND_CONTAINER_PORT}
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "127.0.0.1:${FRONTEND_HOST_PORT}:${FRONTEND_CONTAINER_PORT}"
+    networks:
+      - 1panel-network
+
+networks:
+  1panel-network:
+    external: true
