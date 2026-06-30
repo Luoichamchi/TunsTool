@@ -18,7 +18,11 @@ export const metadata = {
   title: "TunsTool Admin",
   description: "Multi-tenant admin base with JWT auth and RBAC",
   icons: {
-    icon: "/icons/icon-192x192.png",
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/icons/favicon-32x32.png",
     apple: "/icons/icon-192x192.png",
   },
   appleWebApp: {

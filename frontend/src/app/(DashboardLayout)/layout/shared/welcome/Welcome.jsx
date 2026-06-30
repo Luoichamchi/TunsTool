@@ -37,7 +37,7 @@ const Welcome = () => {
           variant="filled"
           sx={{ width: '100%', color: 'white' }}
         >
-          <AlertTitle>Welcome To VIMON</AlertTitle>
+          <AlertTitle>Welcome To TunsTool</AlertTitle>
           Easy to customize the Template!!!
         </Alert>
       </Snackbar>

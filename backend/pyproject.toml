@@ -1,0 +1,29 @@
+[project]
+name = "tunstool-backend"
+version = "0.1.0"
+description = "TunsTool full-stack base — FastAPI backend (multi-tenant, JWT auth, RBAC, audit log)"
+requires-python = "==3.12.*"
+dependencies = [
+    "alembic~=1.15.1",
+    "fastapi~=0.115.12",
+    "pydantic~=2.11.0",
+    "pydantic-settings~=2.8.1",
+    "SQLAlchemy[asyncio]~=2.0.40",
+    "psycopg[binary]~=3.2.9",
+    "uvicorn[standard]~=0.32.1",
+    "APScheduler==3.11.0",
+    "python-dotenv~=1.1.0",
+    "python-jose[cryptography]~=3.3.0",
+    "passlib[bcrypt]~=1.7.4",
+    "email-validator~=2.1.0",
+    "python-multipart~=0.0.6",
+    "bcrypt~=4.0.1",
+]
+
+[dependency-groups]
+build = [
+    "pyinstaller",
+]
+
+[tool.uv]
+package = false

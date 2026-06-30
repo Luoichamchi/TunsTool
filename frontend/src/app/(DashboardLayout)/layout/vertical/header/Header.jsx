@@ -21,7 +21,6 @@ import CustomizerHeaderButton from "@/app/(DashboardLayout)/layout/shared/custom
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
 
 const HIDE_TENANT_FILTER_PATHS = ["/systems/tenant-management"];
-const MOBILE_VIETCIS_LOGO = "/images/logos/vietcis_logo_conservation.jpg";
 
 const Header = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
@@ -42,6 +41,9 @@ const Header = () => {
     isMobileSidebar,
     setIsMobileSidebar,
   } = useContext(CustomizerContext);
+
+  const brandLogo =
+    activeMode === "dark" ? "/icons/logo-dark.png" : "/icons/logo-light.png";
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
     boxShadow: "none",
@@ -141,8 +143,8 @@ const Header = () => {
             >
               <Box
                 component="img"
-                src={MOBILE_VIETCIS_LOGO}
-                alt="VIETCIS"
+                src={brandLogo}
+                alt="TunsTool"
                 sx={{
                   height: 40,
                   width: "auto",
@@ -180,12 +182,12 @@ const Header = () => {
         >
           {!isMobile && (
             <Image
-              src="/images/logos/vietcis-logo.png"
+              src={brandLogo}
               priority
-              alt="logo"
-              width={120}
+              alt="TunsTool"
+              width={130}
               height={50}
-              style={{ marginRight: "10px" }}
+              style={{ marginRight: "10px", objectFit: "contain" }}
             />
           )}
           <CustomizerHeaderButton size={isMobile ? "medium" : "large"} />

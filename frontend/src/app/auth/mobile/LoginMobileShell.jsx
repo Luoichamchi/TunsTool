@@ -56,8 +56,8 @@ export default function LoginMobileShell({ children }) {
         <Box sx={{ px: 3, pt: 3, pb: 0, textAlign: "center" }}>
           <Box
             component="img"
-            src="/images/logos/logo-vimon.png"
-            alt="VIMON"
+            src="/icons/logo-light.png"
+            alt="TunsTool"
             sx={{
               width: "min(200px, 70%)",
               height: "auto",

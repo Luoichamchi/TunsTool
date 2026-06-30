@@ -1,6 +1,6 @@
 import { mutate } from "swr";
 
-export const PULL_REFRESH_EVENT = "vimon:pull-refresh";
+export const PULL_REFRESH_EVENT = "app:pull-refresh";
 
 /** Kích hoạt tải lại dữ liệu toàn app (SWR + custom event + Next router). */
 export async function triggerAppRefresh(router) {

@@ -1,22 +1,41 @@
 # FastAPI Backend Template (DEV ONLY)
 
-## 1. Tạo môi trường ảo
+> Yêu cầu Python **3.12** (pin trong `.python-version` + `requires-python` của `pyproject.toml`). Khuyến nghị dùng [`uv`](https://docs.astral.sh/uv/) — tự chọn đúng phiên bản Python (tự tải nếu thiếu) và cài nhanh bằng wheel dựng sẵn.
+
+## 1. Cài dependencies (uv — khuyến nghị)
+
+Dự án quản lý dependency qua `pyproject.toml` + `uv.lock`. `uv sync` tạo `.venv` và cài đúng version đã lock:
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
+uv sync
 ```
 
-## 2. Cài đặt dependencies
+Chạy lệnh trong môi trường mà không cần activate bằng `uv run`:
 
 ```bash
+uv run uvicorn main:app --reload --port 8100
+```
+
+Hoặc activate thủ công nếu muốn: `source .venv/bin/activate`.
+
+> Group `build` (pyinstaller) không cài mặc định. Khi cần build binary: `uv sync --group build`.
+>
+> Lưu ý: nếu shell đang activate một venv khác (biến `VIRTUAL_ENV` trỏ sang project khác), `deactivate` trước khi chạy `uv`.
+
+### Cách thủ công (không có uv)
+
+Phải dùng đúng Python 3.12 — KHÔNG dùng `python3` mặc định nếu máy đặt mặc định là phiên bản khác:
+
+```bash
+/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ## 3. Tạo file .env
 
 ```env
-DATABASE_URL=postgresql://admin:admin123456@localhost:5434/tunstool_db
+DATABASE_URL=postgresql://admin:admin123456@localhost:5435/tunstool_db
 JWT_SECRET_KEY=your-super-secret-jwt-key-here
 JWT_REFRESH_SECRET_KEY=your-super-secret-refresh-key-here
 JWT_ALGORITHM=HS256
@@ -35,7 +54,7 @@ docker-compose up -d db
 Hiện chỉ còn **một migration** duy nhất: `62fcd9fa78c3_init.py`.
 
 ```bash
-alembic upgrade head
+uv run alembic upgrade head
 ```
 
 ### Đồng bộ migration catalog ↔ tenant
@@ -79,12 +98,13 @@ alembic stamp head
 ## 6. Khởi động ứng dụng (DEV)
 
 ```bash
-uvicorn main:app --reload
+uv run uvicorn main:app --reload --port 8100
+# hoặc sau khi activate: uvicorn main:app --reload --port 8100
 ```
 
 ## Sử dụng 
 
-- API Docs: http://127.0.0.1:8000/docs
+- API Docs: http://127.0.0.1:8100/docs
 - Tài khoản mặc định: `root` / `root123456` / `default` (tenant mặc định)
 - Đăng nhập tại `/api/auth/login` để lấy token
 

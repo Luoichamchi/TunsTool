@@ -5,138 +5,40 @@ import config from "@/utils/config";
 import Link from "next/link";
 import { styled } from "@mui/material/styles";
 import Image from "next/image";
-import { Typography } from "@mui/material";
 
 const Logo = () => {
-  const { isCollapse, isSidebarHover, activeDir, activeMode } =
-    useContext(CustomizerContext);
+  const { isCollapse, isSidebarHover, activeMode } = useContext(
+    CustomizerContext,
+  );
   const TopbarHeight = config.topbarHeight;
+  const isMini = isCollapse === "mini-sidebar" && !isSidebarHover;
 
   const LinkStyled = styled(Link)(() => ({
     height: TopbarHeight,
-    width: isCollapse == "mini-sidebar" && !isSidebarHover ? "40px" : "180px",
+    width: isMini ? "40px" : "180px",
     overflow: "hidden",
-    display: "block",
+    display: "flex",
+    alignItems: "center",
   }));
 
-  if (activeDir === "ltr") {
-    return (
-      <LinkStyled href="/">
-        {activeMode === "dark" ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              height: "100%",
-              width: "100%",
-              gap:
-                isCollapse === "mini-sidebar" && !isSidebarHover
-                  ? "0px"
-                  : "10px",
-            }}
-          >
-            <Image
-              src="/images/logos/vimon-logo.png"
-              alt="logo"
-              priority
-              width={isCollapse === "mini-sidebar" && !isSidebarHover ? 30 : 50}
-              height={TopbarHeight}
-              style={{
-                objectFit: "contain",
-                paddingTop: "10px",
-                paddingBottom: "10px",
-              }}
-            />
-            <Typography
-              variant="h6"
-              color="textSecondary"
-              sx={{
-                fontSize: "25px",
-                lineHeight: 1,
-                fontFamily: "'Source Sans Pro', sans-serif",
-                fontWeight: 300,
-                display:
-                  isCollapse === "mini-sidebar" && !isSidebarHover
-                    ? "none"
-                    : "flex",
-                alignItems: "center",
-                height: "100%",
-                mb: 0,
-              }}
-            >
-              ViMON
-            </Typography>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              height: "100%",
-              width: "100%",
-              gap:
-                isCollapse === "mini-sidebar" && !isSidebarHover
-                  ? "0px"
-                  : "10px",
-            }}
-          >
-            <Image
-              src="/images/logos/vimon-logo.png"
-              alt="logo"
-              priority
-              width={isCollapse === "mini-sidebar" && !isSidebarHover ? 30 : 50}
-              height={TopbarHeight}
-              style={{
-                objectFit: "contain",
-                paddingTop: "10px",
-                paddingBottom: "10px",
-                display: "block",
-              }}
-            />
-            <Typography
-              variant="h6"
-              color="textSecondary"
-              sx={{
-                fontSize: "25px",
-                lineHeight: 1,
-                fontFamily: "'Source Sans Pro', sans-serif",
-                fontWeight: 300,
-                display:
-                  isCollapse === "mini-sidebar" && !isSidebarHover
-                    ? "none"
-                    : "flex",
-                alignItems: "center",
-                height: "100%",
-                mb: 0,
-              }}
-            >
-              ViMON
-            </Typography>
-          </div>
-        )}
-      </LinkStyled>
-    );
-  }
+  // Logo theo theme (nền khớp sidebar). Ảnh vuông nên thu gọn vẫn hiển thị trọn.
+  const logoSrc =
+    activeMode === "dark" ? "/icons/logo-dark.png" : "/icons/logo-light.png";
 
   return (
     <LinkStyled href="/">
-      {activeMode === "dark" ? (
-        <Image
-          src="/images/logos/dark-rtl-logo.svg"
-          alt="logo"
-          height={TopbarHeight}
-          width={174}
-          priority
-        />
-      ) : (
-        <Image
-          src="/images/logos/light-logo-rtl.svg"
-          alt="logo"
-          height={TopbarHeight}
-          width={174}
-          priority
-        />
-      )}
+      <Image
+        src={logoSrc}
+        alt="TunsTool"
+        priority
+        width={isMini ? 40 : 180}
+        height={TopbarHeight}
+        style={{
+          objectFit: "contain",
+          width: isMini ? "40px" : "100%",
+          height: "100%",
+        }}
+      />
     </LinkStyled>
   );
 };

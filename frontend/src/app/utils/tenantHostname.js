@@ -2,9 +2,10 @@ import { parse } from "tldts";
 
 const RESERVED_SUBDOMAINS = new Set(["www", "api"]);
 
-/** Hostname là IPv4 hoặc IPv6 — không dùng subdomain tenant. */
+/** Hostname là local/IP — không dùng subdomain tenant. */
 export function isIpHostname(hostname) {
   if (!hostname) return false;
+  if (hostname === "localhost") return true;
   if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname)) return true;
   if (hostname.includes(":")) return true;
   return false;

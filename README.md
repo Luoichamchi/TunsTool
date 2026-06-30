@@ -14,13 +14,13 @@ docker compose up db
 
 ### Backend
 
+Yêu cầu Python **3.12** (pin trong `backend/.python-version`). Khuyến nghị dùng [`uv`](https://docs.astral.sh/uv/):
+
 ```bash
 cd backend
 cp .env.example .env
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv sync                          # tạo .venv (Python 3.12) + cài theo uv.lock
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8100
 ```
 
 ### Frontend

@@ -14,7 +14,7 @@ export default function Login() {
 
   if (isMobile) {
     return (
-      <PageContainer title="Login Page" description="Đăng nhập VIMON">
+      <PageContainer title="Login Page" description="Đăng nhập TunsTool">
         <LoginMobileShell>
           <AuthLogin isMobile />
         </LoginMobileShell>
@@ -95,11 +95,10 @@ export default function Login() {
                   sx={{ mb: 1, textAlign: "center" }}
                 >
                   <img
-                    src="/images/logos/logo-vimon.png"
-                    alt="logo"
-                    width={300}
+                    src="/icons/logo-light.png"
+                    alt="TunsTool"
+                    width={260}
                     style={{
-                      marginTop: "20px",
                       display: "block",
                       margin: "20px auto 0",
                     }}

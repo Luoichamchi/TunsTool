@@ -12,7 +12,7 @@ import { toast } from "react-toastify";
 import { postFetcher } from "@/app/api/globalFetcher";
 
 const API_RESET_PASSWORD = "/api/auth/reset-password";
-export const DEFAULT_RESET_PASSWORD = "Vietcis1234!@";
+export const DEFAULT_RESET_PASSWORD = "TunsTool@123";
 
 export default function UserResetPasswordDialog({ open, onClose, user }) {
   const [loading, setLoading] = useState(false);

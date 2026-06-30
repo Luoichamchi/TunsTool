@@ -141,18 +141,10 @@ export default function RootLayout({ children }) {
               textAlign: "center",
             }}
           >
-            Copyright © 2025{" "}
-            <a
-              href="https://vietcis.com.vn/"
-              target="_blank"
-              style={{
-                color: "#008000",
-                textDecoration: "none",
-                fontWeight: "bold",
-              }}
-            >
-              VIETCIS,.JSC
-            </a>
+            Copyright © {new Date().getFullYear()}{" "}
+            <span style={{ color: "#008000", fontWeight: "bold" }}>
+              TunsTool
+            </span>
             . All rights reserved.
           </Typography>
         </Footer>

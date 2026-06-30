@@ -1,9 +1,16 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 WORKDIR /app
 
-# Copy requirements và install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# uv binary (copy từ image chính thức)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/usr/local
+
+# Cài dependencies theo lockfile (tách layer để tận dụng cache)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
 
 # Copy source code
 COPY . .
