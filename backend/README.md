@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ## 3. Tạo file .env
 
 ```env
-DATABASE_URL=postgresql://admin:admin123456@localhost:5432/vimon_db
+DATABASE_URL=postgresql://admin:admin123456@localhost:5434/tunstool_db
 JWT_SECRET_KEY=your-super-secret-jwt-key-here
 JWT_REFRESH_SECRET_KEY=your-super-secret-refresh-key-here
 JWT_ALGORITHM=HS256
@@ -42,10 +42,10 @@ alembic upgrade head
 
 Khi khởi động app (`main.py` → `run_startup_migrations`):
 
-1. **Migrate `vimon_db` (catalog)** — gồm bảng `tenants` + toàn bộ schema
+1. **Migrate catalog DB (`tunstool_db`)** — gồm bảng `tenants` + toàn bộ schema
 2. **Lấy revision catalog** sau khi migrate xong
-3. **Migrate từng DB tenant** (`vimon_tos`, ...) lên **cùng revision**
-4. **Tenant `default`** dùng chung `vimon_db` → chỉ migrate qua bước 1, không migrate lại
+3. **Migrate từng DB tenant** (`app_<code>`, ...) lên **cùng revision**
+4. **Tenant `default`** dùng chung `tunstool_db` → chỉ migrate qua bước 1, không migrate lại
 
 Migration dùng chung file, phân biệt qua `tenant_mode`:
 - Catalog (`tenant_mode=False`): chạy đủ, kể cả bảng `tenants`

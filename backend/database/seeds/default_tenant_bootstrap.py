@@ -1,4 +1,4 @@
-"""Đăng ký tenant default vào catalog — dùng chung vimon_db, không tạo DB riêng."""
+"""Đăng ký tenant default vào catalog — dùng chung catalog DB, không tạo DB riêng."""
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ DEFAULT_TENANT_SUBDOMAIN = "app"
 
 
 async def ensure_default_tenant(catalog_db: AsyncSession) -> None:
-    """Đảm bảo bản ghi tenant default tồn tại và trỏ tới catalog DB (vimon_db)."""
+    """Đảm bảo bản ghi tenant default tồn tại và trỏ tới catalog DB."""
     catalog_db_name = get_catalog_db_name()
 
     result = await catalog_db.execute(

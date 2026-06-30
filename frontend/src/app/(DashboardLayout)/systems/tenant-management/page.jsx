@@ -38,6 +38,7 @@ import dayjs from "dayjs";
 import { toast } from "react-toastify";
 import { useTheme } from "@mui/material/styles";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
+import config from "@/utils/config";
 import { useTenantFilterVersion } from "@/app/context/TenantFilterContext";
 
 const fetchTenants = async (page, pageSize, search) => {
@@ -188,7 +189,7 @@ export default function TenantManagementPage() {
       .replace(/[^a-z0-9_]/g, "_")
       .replace(/_+/g, "_")
       .replace(/^_|_$/g, "");
-    return safe ? `vimon_${safe}` : "";
+    return safe ? `${config.tenantDbPrefix}${safe}` : "";
   };
 
   const handleFormChange = (e) => {
@@ -497,11 +498,11 @@ export default function TenantManagementPage() {
                 onChange={handleFormChange}
                 fullWidth
                 disabled={isEditMode}
-                placeholder="vimon_tenant_code"
+                placeholder={`${config.tenantDbPrefix}tenant_code`}
                 helperText={
                   isEditMode
                     ? "Tên database PostgreSQL đã provision"
-                    : "Để trống sẽ tự sinh vimon_{tenant_code}. Host lấy từ DATABASE_URL trên server"
+                    : `Để trống sẽ tự sinh ${config.tenantDbPrefix}{tenant_code}. Host lấy từ DATABASE_URL trên server`
                 }
               />
               <LocalizationProvider dateAdapter={AdapterDayjs}>

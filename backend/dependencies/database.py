@@ -54,7 +54,7 @@ async def get_tenant_code_from_token(
 
 
 async def get_catalog_db() -> AsyncGenerator[AsyncSession, None]:
-    """Session catalog DB (vimon_db) — registry tenants."""
+    """Session catalog DB — registry tenants."""
     async for session in get_async_db():
         yield session
 

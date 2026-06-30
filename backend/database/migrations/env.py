@@ -18,7 +18,7 @@ config = context.config
 # Ưu tiên URL do migration_runner truyền (catalog / từng tenant).
 # Chỉ fallback .env khi chạy alembic CLI với URL mặc định trong alembic.ini.
 _ALEMBIC_INI_PLACEHOLDER = (
-    "postgresql+psycopg://admin:admin123456@localhost:6000/vimon_db"
+    "postgresql+psycopg://admin:admin123456@localhost:6000/tunstool_db"
 )
 if settings.DATABASE_URL:
     current_url = config.get_main_option("sqlalchemy.url")

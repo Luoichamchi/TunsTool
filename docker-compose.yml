@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin123456
-      POSTGRES_DB: vimon_db
+      POSTGRES_DB: tunstool_db
     ports:
       - "5434:5432"
 
@@ -17,7 +17,7 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgresql://admin:admin123456@db:5432/vimon_db
+      DATABASE_URL: postgresql://admin:admin123456@db:5432/tunstool_db
     ports:
       - "8000:8000"
 

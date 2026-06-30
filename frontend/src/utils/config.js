@@ -14,6 +14,7 @@ const config = {
   sidebarWidth: 270,
   miniSidebarWidth: 87,
   topbarHeight: 70,
+  tenantDbPrefix: "app_",
 };
 
 export default config;

@@ -133,7 +133,7 @@ async def migrate_tenant_schema(db_name: str) -> None:
 
 
 async def migrate_catalog_schema() -> None:
-    """Áp dụng migration cho catalog DB (vimon_db)."""
+    """Áp dụng migration cho catalog DB."""
     sync_url = get_catalog_database_url()
     async_url = sync_url
 
@@ -226,7 +226,7 @@ async def migrate_all_tenant_databases(
 
 
 async def run_startup_migrations(catalog_db: AsyncSession) -> None:
-    """Migrate catalog (vimon_db) rồi đồng bộ toàn bộ DB tenant."""
+    """Migrate catalog rồi đồng bộ toàn bộ DB tenant."""
     print("🔄 Migrating catalog database...")
     await migrate_catalog_schema()
 
