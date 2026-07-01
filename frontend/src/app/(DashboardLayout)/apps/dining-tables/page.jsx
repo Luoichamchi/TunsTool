@@ -144,8 +144,18 @@ export default function DiningTablesPage() {
 
               return (
                 <Grid key={item.id} size={{ xs: 12, md: 6, lg: 4 }}>
-                  <Card variant="outlined">
-                    <CardContent>
+                  <Card
+                    variant="outlined"
+                    sx={
+                      isServing
+                        ? {
+                            borderWidth: 2,
+                            borderColor: "success.main",
+                          }
+                        : undefined
+                    }
+                  >
+                    <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
                       <Stack direction="row" justifyContent="space-between" alignItems="start">
                         <Box>
                           <Typography variant="h6" fontWeight={700}>
@@ -157,29 +167,30 @@ export default function DiningTablesPage() {
                         </Box>
                         <Chip label={statusLabel} color={statusColor} size="small" />
                       </Stack>
-                      <Stack spacing={1} mt={2}>
+                      <Stack spacing={1} mt={1.5}>
                         {!item.is_active ? null : isServing ? (
                           <Stack direction="row" spacing={1}>
                             <Button
-                              variant="outlined"
+                              variant="contained"
                               color="warning"
                               onClick={() => handleCloseTable(item)}
                               disabled={!canUpdate || closingTableId === item.id}
-                              sx={{ flex: 1 }}
+                              sx={{ flex: 1, color: "common.white" }}
                             >
                               {closingTableId === item.id ? "Đang trả..." : "Trả bàn"}
                             </Button>
                             <Button
-                              variant="outlined"
+                              variant="contained"
+                              color="info"
                               onClick={() => showQrForServingTable(item)}
-                              sx={{ flex: 1 }}
+                              sx={{ flex: 1, color: "common.white" }}
                             >
                               Xem QR
                             </Button>
                           </Stack>
                         ) : (
                           <Button
-                            variant="contained"
+                            variant="outlined"
                             onClick={() => openTable(item)}
                             disabled={!canUpdate || openingTableId === item.id}
                           >
