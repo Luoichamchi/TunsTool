@@ -468,7 +468,9 @@ class DiningTableService:
 
     async def create_for(self, user_id: int, payload: DiningTableCreate):
         await ensure_permission_global(self.db, user_id, "dining_table", "create")
-        return _table_to_response(await self.create(payload))
+        row = await self.create(payload)
+        table = await self._load_table_with_sessions(row.id)
+        return _table_to_response(table)
 
     async def update_for(self, user_id: int, table_id: int, payload: DiningTableUpdate):
         await ensure_permission_global(self.db, user_id, "dining_table", "update")

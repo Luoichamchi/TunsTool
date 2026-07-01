@@ -46,6 +46,10 @@
     "Reset Settings": "Đặt lại cài đặt",
     "Clear All Settings & Reload": "Xóa tất cả cài đặt và tải lại",
     "TenantManagement": "Quản lý tenant",
-    "Station Data": "Dữ liệu trạm"
+    "Station Data": "Dữ liệu trạm",
+    "ProductManagement": "Quản lý món ăn",
+    "TableManagement": "Quản lý bàn",
+    "DiningTables": "Phục vụ bàn ăn",
+    "OrderManagement": "Quản lý đơn hàng"
 
 }

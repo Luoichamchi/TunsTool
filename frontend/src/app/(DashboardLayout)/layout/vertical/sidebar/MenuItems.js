@@ -32,6 +32,14 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
+    title: "TableManagement",
+    icon: IconPackage,
+    chipColor: "secondary",
+    href: "/apps/tables",
+    permission: "dining_table.view",
+  },
+  {
+    id: uniqueId(),
     title: "DiningTables",
     icon: IconFileCheck,
     chipColor: "secondary",
