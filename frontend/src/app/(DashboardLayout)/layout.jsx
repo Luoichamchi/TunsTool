@@ -1,10 +1,11 @@
 "use client";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
+import IconButton from "@mui/material/IconButton";
 import { styled, useTheme } from "@mui/material/styles";
 import React, { useContext } from "react";
-import Header from "./layout/vertical/header/Header";
 import Sidebar from "./layout/vertical/sidebar/Sidebar";
+import Header, { HEADER_LOGO_SIZE } from "./layout/vertical/header/Header";
 import Customizer from "./layout/shared/customizer/Customizer";
 import Navigation from "./layout/horizontal/navbar/Navigation";
 import HorizontalHeader from "./layout/horizontal/header/Header";
@@ -14,6 +15,13 @@ import Typography from "@mui/material/Typography";
 import MobileBottomNav from "./layout/shared/MobileBottomNav";
 import MobilePullToRefresh from "@/app/components/mobile/MobilePullToRefresh";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { IconMenu2 } from "@tabler/icons-react";
+import { getPageBackground } from "./layout/pageBackground";
+import {
+  LAYOUT_PADDING_LEFT,
+  LAYOUT_PADDING_RIGHT,
+} from "./layout/pageSpacing";
 
 const MainWrapper = styled("div")(() => ({
   display: "flex",
@@ -34,8 +42,8 @@ const PageWrapper = styled("div")(() => ({
 
 const Footer = styled("footer")(({ theme }) => ({
   width: "100%",
-  background: theme.palette.background.paper,
-  borderTop: `1px solid ${theme.palette.divider}`,
+  background: getPageBackground(theme),
+  borderTop: "none",
   padding: "16px 0",
   textAlign: "center",
   position: "sticky",
@@ -44,11 +52,14 @@ const Footer = styled("footer")(({ theme }) => ({
 }));
 
 export default function RootLayout({ children }) {
-  const { activeLayout, isLayout, activeMode, isCollapse } =
+  const { activeLayout, isLayout, activeMode, isCollapse, setIsMobileSidebar } =
     useContext(CustomizerContext);
   const theme = useTheme();
   const MiniSidebarWidth = config.miniSidebarWidth;
   const isMobile = useIsMobile();
+  const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
+  const showTabletSidebarToggle =
+    activeLayout !== "horizontal" && lgDown && !isMobile;
 
   return (
     <MainWrapper
@@ -83,26 +94,38 @@ export default function RootLayout({ children }) {
           }),
         }}
       >
-        {/* ------------------------------------------- */}
-        {/* Header */}
-        {/* ------------------------------------------- */}
-        {activeLayout === "horizontal" ? <HorizontalHeader /> : <Header />}
         {/* PageContent */}
-        {activeLayout === "horizontal" ? <Navigation /> : ""}
+        {activeLayout === "horizontal" ? <HorizontalHeader /> : <Header />}
+        {activeLayout === "horizontal" ? <Navigation /> : null}
+        {showTabletSidebarToggle ? (
+          <IconButton
+            aria-label="menu"
+            onClick={() => setIsMobileSidebar(!isMobileSidebar)}
+            sx={{
+              position: "fixed",
+              top: 12,
+              left: 12,
+              zIndex: 1200,
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              boxShadow: 1,
+            }}
+          >
+            <IconMenu2 size={20} />
+          </IconButton>
+        ) : null}
         <Container
           sx={{
             pt: "15px",
             px: 0,
-            paddingLeft: "15px !important",
-            paddingRight: "15px !important",
+            paddingLeft: `${LAYOUT_PADDING_LEFT}px !important`,
+            paddingRight: `${LAYOUT_PADDING_RIGHT}px !important`,
             width: "100%",
             minWidth: 0,
             maxWidth: isLayout === "boxed" ? "lg" : "100%!important",
             pb: isMobile ? "calc(50px + env(safe-area-inset-bottom))" : 0,
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? theme.palette.background.default
-                : "#F3F8FB",
+            backgroundColor: getPageBackground(theme),
             // Mobile (Capacitor): fill remaining height and scroll only here
             ...(isMobile && {
               flexGrow: 1, // ✅ chỉ giữ cái này
@@ -115,7 +138,9 @@ export default function RootLayout({ children }) {
 
           <Box
             sx={{
-              minHeight: isMobile ? "auto" : "calc(100dvh - 100px)",
+              minHeight: isMobile
+                ? "auto"
+                : `calc(100dvh - ${HEADER_LOGO_SIZE + 80}px)`,
               width: "100%",
               maxWidth: "100%",
               minWidth: 0,

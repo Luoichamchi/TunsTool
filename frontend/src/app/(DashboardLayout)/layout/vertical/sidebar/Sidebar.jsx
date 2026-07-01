@@ -3,11 +3,20 @@ import Drawer from "@mui/material/Drawer";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import SidebarItems from "./SidebarItems";
-import Logo from "../../shared/logo/Logo";
+import SidebarFooter from "./SidebarFooter";
 import Scrollbar from "@/app/components/custom-scroll/Scrollbar";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
 import config from "@/utils/config";
+import { getPageBackground } from "../../pageBackground";
+
+const sidebarPaperSx = (theme, { mobile = false } = {}) => ({
+  backgroundColor: getPageBackground(theme),
+  borderRight: "none",
+  ...(mobile
+    ? { boxShadow: theme.shadows[8] }
+    : { boxShadow: "none" }),
+});
 
 const Sidebar = () => {
   const lgUp = useMediaQuery((theme) => theme.breakpoints.down("lg"));
@@ -36,6 +45,12 @@ const Sidebar = () => {
   const onHoverLeave = () => {
     setIsSidebarHover(false);
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("customizer_collapse", isCollapse);
+    }
+  }, [isCollapse]);
 
   return (
     <>
@@ -67,6 +82,7 @@ const Sidebar = () => {
                   }),
                   width: toggleWidth,
                   boxSizing: "border-box",
+                  ...sidebarPaperSx(theme),
                 },
               },
             }}
@@ -77,26 +93,17 @@ const Sidebar = () => {
             <Box
               sx={{
                 height: "100%",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {/* ------------------------------------------- */}
               {/* Logo */}
               {/* ------------------------------------------- */}
-              <Box
-                sx={{
-                  px: 3,
-                  pt: 1.5,
-                  pb: 0.5,
-                }}
-              >
-                <Logo />
-              </Box>
-              <Scrollbar sx={{ height: "calc(100% - 80px)" }}>
-                {/* ------------------------------------------- */}
-                {/* Sidebar Items */}
-                {/* ------------------------------------------- */}
+              <Scrollbar sx={{ flex: 1, minHeight: 0 }}>
                 <SidebarItems />
               </Scrollbar>
+              <SidebarFooter />
             </Box>
           </Drawer>
         </Box>
@@ -111,7 +118,7 @@ const Sidebar = () => {
               sx: {
                 width: SidebarWidth,
                 border: "0 !important",
-                boxShadow: (theme) => theme.shadows[8],
+                ...sidebarPaperSx(theme, { mobile: true }),
               },
             },
           }}
@@ -121,17 +128,18 @@ const Sidebar = () => {
           {/* ------------------------------------------- */}
           <Box
             sx={{
-              px: 2,
-              pt: 1.5,
-              pb: 0.5,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <Logo />
+            <Scrollbar sx={{ flex: 1, minHeight: 0 }}>
+              <SidebarItems />
+            </Scrollbar>
+            <SidebarFooter
+              onNavigate={() => setIsMobileSidebar(false)}
+            />
           </Box>
-          {/* ------------------------------------------- */}
-          {/* Sidebar For Mobile */}
-          {/* ------------------------------------------- */}
-          <SidebarItems />
         </Drawer>
       )}
     </>

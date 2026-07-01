@@ -9,7 +9,10 @@ import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customi
 import { useContext } from "react";
 import config from "@/utils/config";
 import SidebarItems from "../../vertical/sidebar/SidebarItems";
+import SidebarFooter from "../../vertical/sidebar/SidebarFooter";
+import Scrollbar from "@/app/components/custom-scroll/Scrollbar";
 import { useTheme } from "@mui/material";
+import { getPageBackground } from "../../pageBackground";
 const Navigation = () => {
   const theme = useTheme();
   const isMobile = useIsMobile();
@@ -51,7 +54,8 @@ const Navigation = () => {
           sx: {
             width: SidebarWidth,
             border: "0 !important",
-            boxShadow: (theme) => theme.shadows[8],
+            boxShadow: theme.shadows[8],
+            backgroundColor: getPageBackground(theme),
           },
         },
       }}
@@ -59,17 +63,15 @@ const Navigation = () => {
       {/* ------------------------------------------- */}
       {/* Logo */}
       {/* ------------------------------------------- */}
-      <Box
-        sx={{
-          px: 2,
-        }}
-      >
-        <Logo />
+      <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <Box sx={{ px: 2, flexShrink: 0 }}>
+          <Logo />
+        </Box>
+        <Scrollbar sx={{ flex: 1, minHeight: 0 }}>
+          <SidebarItems />
+        </Scrollbar>
+        <SidebarFooter onNavigate={() => setIsMobileSidebar(false)} />
       </Box>
-      {/* ------------------------------------------- */}
-      {/* Sidebar For Mobile */}
-      {/* ------------------------------------------- */}
-      <SidebarItems />
     </Drawer>
   );
 };

@@ -1,160 +1,50 @@
+"use client";
+
 import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
 import Toolbar from "@mui/material/Toolbar";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { styled } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
-import { useIsDefaultTenant } from "@/app/utils/auth/useIsDefaultTenant";
-import { usePathname } from "next/navigation";
-import config from "@/utils/config";
-import { useContext, useEffect } from "react";
-import { IconMenu2 } from "@tabler/icons-react";
-import Profile from "./Profile";
-import Search from "./Search";
-import TenantFilterSelect from "@/app/components/shared/TenantFilterSelect";
-import CustomizerHeaderButton from "@/app/(DashboardLayout)/layout/shared/customizer/CustomizerHeaderButton";
-import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
+import Logo from "../../shared/logo/Logo";
+import { getPageBackground } from "../../pageBackground";
+import { LAYOUT_PADDING_LEFT, LAYOUT_PADDING_RIGHT } from "../../pageSpacing";
 
-const HIDE_TENANT_FILTER_PATHS = ["/systems/tenant-management"];
+const HEADER_LOGO_SIZE = 96;
 
-const Header = () => {
-  const lgUp = useMediaQuery((theme) => theme.breakpoints.up("lg"));
+export default function Header() {
+  const theme = useTheme();
   const isMobile = useIsMobile();
-  const pathname = usePathname();
-  const isDefaultTenant = useIsDefaultTenant();
-  const showTenantFilter =
-    isDefaultTenant &&
-    !HIDE_TENANT_FILTER_PATHS.some((path) => pathname?.startsWith(path));
-  const TopbarHeight = config.topbarHeight;
-
-  // drawer
-  const {
-    activeMode,
-    setIsCollapse,
-    isCollapse,
-    isMobileSidebar,
-    setIsMobileSidebar,
-  } = useContext(CustomizerContext);
-
-  const AppBarStyled = styled(AppBar)(({ theme }) => ({
-    boxShadow: "none",
-    background: theme.palette.background.paper,
-    justifyContent: "center",
-    backdropFilter: "blur(4px)",
-    [theme.breakpoints.up("lg")]: {
-      minHeight: TopbarHeight,
-    },
-  }));
-  const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
-    width: "100%",
-    color: theme.palette.text.secondary,
-  }));
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("customizer_collapse", isCollapse);
-    }
-  }, [isCollapse]);
+  const toolbarMinHeight = HEADER_LOGO_SIZE + (isMobile ? 8 : 16);
 
   return (
-    // ...existing code...
-    <AppBarStyled
+    <AppBar
       position="sticky"
-      color="default"
+      elevation={0}
       sx={{
-        display: "flex",
-        borderBottom:
-          activeMode === "dark" ? "1px solid #333" : "1px solid #e0e0e0",
-        boxShadow:
-          activeMode === "dark"
-            ? "0 2px 8px 0 rgba(0,0,0,0.12), 0 1.5px 4px 0 rgba(0,0,0,0.10)"
-            : "0 2px 8px 0 rgba(0,0,0,0.06), 0 1.5px 4px 0 rgba(0,0,0,0.03)",
+        backgroundColor: getPageBackground(theme),
+        backgroundImage: "none",
+        boxShadow: "none",
+        borderBottom: "none",
+        color: "inherit",
         zIndex: 1100,
-        backgroundColor:
-          activeMode === "dark"
-            ? "rgba(30, 32, 36, 0.85)"
-            : undefined,
-        backdropFilter: "blur(4px)",
-        ...(isMobile && {
-          minHeight: "auto",
-        }),
       }}
     >
-      <ToolbarStyled
+      <Toolbar
+        disableGutters
         sx={{
-          ...(isMobile && {
-            minHeight: 48,
-            py: 0.75,
-            px: 1,
-            gap: 0.5,
-            overflow: "visible",
-          }),
+          minHeight: toolbarMinHeight,
+          pl: `${LAYOUT_PADDING_LEFT}px`,
+          pr: `${LAYOUT_PADDING_RIGHT}px`,
+          py: 1,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
         }}
       >
-        {/* Toggle Button Sidebar — ẩn trên mobile (dùng bottom nav) */}
-        {!isMobile && (
-          <IconButton
-            color="inherit"
-            aria-label="menu"
-            onClick={() => {
-              if (lgUp) {
-                isCollapse === "full-sidebar"
-                  ? setIsCollapse("mini-sidebar")
-                  : setIsCollapse("full-sidebar");
-              } else {
-                setIsMobileSidebar(!isMobileSidebar);
-              }
-            }}
-          >
-            <IconMenu2 size="20" />
-          </IconButton>
-        )}
-
-        {/* Search + Tenant filter */}
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          sx={{
-            ml: isMobile ? 0 : 1,
-            minWidth: 0,
-            flex: isMobile && showTenantFilter ? 1 : undefined,
-            overflow: "visible",
-          }}
-        >
-          {!isMobile && <Search />}
-          {showTenantFilter && (
-            <TenantFilterSelect
-              sx={isMobile ? { flex: 1, width: "100%" } : undefined}
-            />
-          )}
-        </Stack>
-        {/* {lgUp ? (
-              <>
-                <Navigation />
-              </>
-            ) : null} */}
-
-        <Box sx={{ flexGrow: 1 }} />
-        <Stack
-          spacing={isMobile ? 0.25 : 0.5}
-          direction="row"
-          sx={{
-            alignItems: "center",
-            flexShrink: 0,
-            ml: "auto",
-          }}
-        >
-          <CustomizerHeaderButton size={isMobile ? "medium" : "large"} />
-
-          <Profile avatarSize={isMobile ? 28 : 35} />
-        </Stack>
-      </ToolbarStyled>
-    </AppBarStyled>
-    // ...existing code...
+        <Logo variant="header" />
+      </Toolbar>
+    </AppBar>
   );
-};
+}
 
-export default Header;
+export { HEADER_LOGO_SIZE };

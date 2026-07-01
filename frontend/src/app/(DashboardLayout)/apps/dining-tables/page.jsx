@@ -32,14 +32,13 @@ function buildQrValue(qrBaseUrl, tenantCode, sessionToken) {
 
 export default function DiningTablesPage() {
   const { tenantCode } = useTenant();
-  const [search, setSearch] = useState("");
   const [qrDialog, setQrDialog] = useState({ open: false, item: null, qrValue: "" });
   const [openingTableId, setOpeningTableId] = useState(null);
   const [closingTableId, setClosingTableId] = useState(null);
 
   const canUpdate = useHasPermission("dining_table", "update");
 
-  const url = `${api.GET_TABLE_LIST}?page=1&page_size=100&search=${encodeURIComponent(search)}`;
+  const url = `${api.GET_TABLE_LIST}?page=1&page_size=100`;
   const { data, mutate } = useSWR(url, getFetcher, { refreshInterval: 5000 });
   const rows = data?.data || [];
 
@@ -122,16 +121,6 @@ export default function DiningTablesPage() {
     <PageContainer title="Sơ đồ bàn" description="Theo dõi trạng thái bàn, nhận/trả bàn và phát QR cho khách đặt món">
       <Card variant="outlined">
         <CardContent>
-          <Typography variant="h5" fontWeight={700} mb={2}>
-            Sơ đồ bàn
-          </Typography>
-          <TextField
-            fullWidth
-            placeholder="Tìm theo mã bàn hoặc tên bàn..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ mb: 2 }}
-          />
           <Grid container spacing={2}>
             {rows.map((item) => {
               const isServing = item.status === "serving";

@@ -5,7 +5,6 @@ import {
   IconPackage,
   IconFileCheck,
   IconSettings,
-  IconUser,
   IconNotebook,
 } from "@tabler/icons-react";
 
@@ -82,17 +81,6 @@ const Menuitems = [
     href: "/systems/tenant-management",
     permission: "tenant.view",
     defaultTenantOnly: true,
-  },
-  {
-    navlabel: true,
-    subheader: "Account",
-  },
-  {
-    id: uniqueId(),
-    title: "Profile",
-    icon: IconUser,
-    chipColor: "secondary",
-    href: "/apps/user-profile/profile",
   },
 ];
 

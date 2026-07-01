@@ -14,6 +14,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import { styled, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
+import { getNavItemButtonSx, NAV_ITEM_ICON_SX } from "../sidebarNavItemSx";
 
 export default function NavItem({
   item,
@@ -35,30 +36,15 @@ export default function NavItem({
       <Icon stroke={1.5} size="1.3rem" />
     );
 
-  const ListItemStyled = styled(ListItemButton)(() => ({
-    whiteSpace: "nowrap",
-    marginBottom: "2px",
-    padding: "8px 10px",
-    borderRadius: `${isBorderRadius}px`,
-    backgroundColor: level > 1 ? "transparent !important" : "inherit",
-    color:
-      level > 1 && (pathDirect === item?.href || pathDirect.startsWith(item?.href + "/"))
-        ? `${theme.palette.primary.main}!important`
-        : theme.palette.text.secondary,
-    paddingLeft: hideMenu ? "10px" : level > 2 ? `${level * 15}px` : "10px",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.light,
-      color: theme.palette.primary.main,
-    },
-    "&.Mui-selected": {
-      color: "white",
-      backgroundColor: theme.palette.primary.main,
-      "&:hover": {
-        backgroundColor: theme.palette.primary.main,
-        color: "white",
-      },
-    },
-  }));
+  const ListItemStyled = styled(ListItemButton)(() =>
+    getNavItemButtonSx(theme, {
+      isBorderRadius,
+      hideMenu,
+      level,
+      itemHref: item?.href,
+      pathDirect,
+    }),
+  );
 
   const listItemProps = {
     component: item?.external ? "a" : Link,
@@ -77,8 +63,7 @@ export default function NavItem({
         >
           <ListItemIcon
             sx={{
-              minWidth: "36px",
-              p: "3px 0",
+              ...NAV_ITEM_ICON_SX,
               color:
                 level > 1 && (pathDirect === item?.href || pathDirect.startsWith(item?.href + "/"))
                   ? `${theme.palette.primary.main}!important`

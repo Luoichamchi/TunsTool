@@ -9,6 +9,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import NavItem from "./NavItem";
 import NavCollapse from "./NavCollapse";
 import NavGroup from "./NavGroup/NavGroup";
+import SidebarCollapseToggle from "./SidebarCollapseToggle";
 import { useContext } from "react";
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
 
@@ -82,6 +83,7 @@ const SidebarItems = () => {
   return (
     <Box sx={{ px: 3 }}>
       <List sx={{ pt: 0 }} className="sidebarNav">
+        <SidebarCollapseToggle />
         {visibleMenuItems.map((item) => {
           if (!checkItemPermission(item)) return null;
           // {/********SubHeader**********/}

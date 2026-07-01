@@ -6,13 +6,15 @@ import Link from "next/link";
 import { styled } from "@mui/material/styles";
 import Image from "next/image";
 
-const Logo = () => {
+const Logo = ({ variant = "sidebar" }) => {
   const { isCollapse, isSidebarHover, activeMode } = useContext(
     CustomizerContext,
   );
   const TopbarHeight = config.topbarHeight;
-  const isMini = isCollapse === "mini-sidebar" && !isSidebarHover;
-  const logoSize = isMini ? 40 : TopbarHeight;
+  const isHeader = variant === "header";
+  const isMini =
+    !isHeader && isCollapse === "mini-sidebar" && !isSidebarHover;
+  const logoSize = isHeader ? 96 : isMini ? 40 : TopbarHeight;
 
   const LinkStyled = styled(Link)(() => ({
     height: logoSize,
@@ -23,7 +25,6 @@ const Logo = () => {
     justifyContent: "center",
   }));
 
-  // Thu gọn sidebar: chỉ hiện mark TT (favicon). Mở rộng: logo đầy đủ theo theme.
   const logoSrc = isMini
     ? "/icons/favicon.png"
     : activeMode === "dark"

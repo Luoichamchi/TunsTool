@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
   CircularProgress,
   Dialog,
@@ -15,6 +14,8 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  Menu,
+  MenuItem,
   Stack,
   Switch,
   Table,
@@ -22,16 +23,14 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { IconEdit, IconTrash } from "@tabler/icons-react";
+import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 
-import PageContainer from "@/app/components/container/PageContainer";
 import api from "@/app/api/api";
 import { deleteFetcher, getFetcher, postFetcher, putFetcher } from "@/app/api/globalFetcher";
 import { useHasPermission } from "@/app/utils/auth/useHasPermission";
@@ -51,25 +50,47 @@ const tableSx = {
     border: (theme) =>
       `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#e0e0e0"}`,
     textAlign: "center",
-    padding: "8px 12px",
+    padding: "4px 8px",
   },
 };
 
+const listCardSx = {
+  borderRadius: 2,
+  border: (theme) =>
+    `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#e0e0e0"}`,
+  p: 2,
+  bgcolor: "background.paper",
+};
+
+function getStatusChip(item) {
+  if (!item.is_active) {
+    return <Chip label="Khoá" size="small" />;
+  }
+  if (item.status === "serving") {
+    return <Chip label="Đang phục vụ" color="warning" size="small" />;
+  }
+  return <Chip label="Hoạt động" color="success" size="small" />;
+}
+
 export default function TablesPage() {
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   const [dialog, setDialog] = useState({ open: false, item: null });
   const [form, setForm] = useState(emptyForm);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuRow, setMenuRow] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canCreate = useHasPermission("dining_table", "create");
   const canUpdate = useHasPermission("dining_table", "update");
   const canDelete = useHasPermission("dining_table", "delete");
 
-  const url = `${api.GET_TABLE_LIST}?page=${page + 1}&page_size=${pageSize}&search=${encodeURIComponent(search)}`;
+  const url = `${api.GET_TABLE_LIST}?page=${page + 1}&page_size=${pageSize}`;
   const { data, mutate, isLoading } = useSWR(url, getFetcher);
   const rows = data?.data || [];
   const total = data?.total || 0;
+
+  const openMenu = Boolean(anchorEl);
 
   const openDialog = (item = null) => {
     setDialog({ open: true, item });
@@ -89,6 +110,26 @@ export default function TablesPage() {
     setForm(emptyForm);
   };
 
+  const handleMenuClick = (event, row) => {
+    setAnchorEl(event.currentTarget);
+    setMenuRow(row);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuRow(null);
+  };
+
+  const handleMenuEdit = () => {
+    if (menuRow) openDialog(menuRow);
+    handleMenuClose();
+  };
+
+  const handleMenuDelete = () => {
+    setConfirmOpen(true);
+    setAnchorEl(null);
+  };
+
   const saveTable = async () => {
     try {
       if (dialog.item) {
@@ -105,11 +146,13 @@ export default function TablesPage() {
     }
   };
 
-  const removeTable = async (id) => {
-    if (!window.confirm("Xoá bàn ăn này?")) return;
+  const removeTable = async () => {
+    if (!menuRow) return;
     try {
-      await deleteFetcher(`${api.DELETE_TABLE}${id}`);
+      await deleteFetcher(`${api.DELETE_TABLE}${menuRow.id}`);
       toast.success("Đã xoá bàn ăn");
+      setConfirmOpen(false);
+      setMenuRow(null);
       mutate();
     } catch (error) {
       toast.error(error.message || "Không thể xoá bàn ăn");
@@ -117,116 +160,126 @@ export default function TablesPage() {
   };
 
   return (
-    <PageContainer title="Quản lý bàn" description="Thêm, sửa và xoá danh mục bàn ăn">
-      <Card variant="outlined">
-        <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h5" fontWeight={700}>
-              Danh mục bàn ăn
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => openDialog()}
-              disabled={!canCreate}
-            >
-              Thêm bàn
-            </Button>
-          </Stack>
+    <Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+        <Card
+          variant="outlined"
+          sx={{
+            p: 2,
+            width: "100%",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography variant="h4" fontWeight={700} color="primary.main">
+            Quản lý bàn ăn
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => openDialog()}
+            disabled={!canCreate}
+          >
+            Thêm bàn
+          </Button>
+        </Card>
+      </Stack>
 
-          <Box mb={2} maxWidth={400}>
-            <TextField
-              fullWidth
-              placeholder="Tìm theo mã bàn hoặc tên bàn..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-            />
-          </Box>
+      <Box sx={listCardSx}>
+        <Typography variant="h6" fontWeight={600} mb={2}>
+          Danh sách bàn ăn
+        </Typography>
 
-          <TableContainer>
-            <Table sx={tableSx}>
-              <TableHead>
+        <TableContainer>
+          <Table sx={tableSx}>
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Mã bàn</TableCell>
+                <TableCell>Tên bàn</TableCell>
+                <TableCell>Trạng thái</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {isLoading ? (
                 <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Mã bàn</TableCell>
-                  <TableCell>Tên bàn</TableCell>
-                  <TableCell>Trạng thái</TableCell>
-                  <TableCell>Thao tác</TableCell>
+                  <TableCell colSpan={5} align="center">
+                    <CircularProgress size={28} />
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      <CircularProgress size={28} />
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    Không có dữ liệu
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((item) => (
+                  <TableRow key={item.id} hover>
+                    <TableCell>{item.id}</TableCell>
+                    <TableCell>{item.table_code}</TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{getStatusChip(item)}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={(e) => handleMenuClick(e, item)}>
+                        <IconDotsVertical width={18} />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
-                ) : rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      Không có dữ liệu
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  rows.map((item) => {
-                    const isServing = item.status === "serving";
-                    return (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{item.id}</TableCell>
-                        <TableCell>{item.table_code}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={item.is_active ? "Hoạt động" : "Khoá"}
-                            color={item.is_active ? "success" : "default"}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={0.5} justifyContent="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => openDialog(item)}
-                              disabled={!canUpdate}
-                            >
-                              <IconEdit size={18} />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => removeTable(item.id)}
-                              disabled={!canDelete || isServing}
-                            >
-                              <IconTrash size={18} />
-                            </IconButton>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-          <TablePagination
-            component="div"
-            count={total}
-            page={page}
-            onPageChange={(_, newPage) => setPage(newPage)}
-            rowsPerPage={pageSize}
-            onRowsPerPageChange={(e) => {
-              setPageSize(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            labelRowsPerPage="Số dòng:"
-          />
-        </CardContent>
-      </Card>
+        <Stack
+          direction="row"
+          justifyContent="flex-end"
+          alignItems="center"
+          spacing={2}
+          mt={2}
+        >
+          <Typography>Trang:</Typography>
+          <Button disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            Trước
+          </Button>
+          <Typography>{page + 1}</Typography>
+          <Button
+            disabled={(page + 1) * pageSize >= total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Sau
+          </Button>
+          <Typography>Tổng: {total}</Typography>
+        </Stack>
+
+        <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
+          <MenuItem onClick={handleMenuEdit} disabled={!canUpdate}>
+            <IconEdit width={18} style={{ marginRight: 8 }} />
+            Sửa
+          </MenuItem>
+          <MenuItem
+            onClick={handleMenuDelete}
+            disabled={!canDelete || menuRow?.status === "serving"}
+          >
+            <IconTrash width={18} style={{ marginRight: 8 }} color="red" />
+            Xoá
+          </MenuItem>
+        </Menu>
+
+        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+          <DialogTitle>Xác nhận xoá</DialogTitle>
+          <DialogContent>Bạn có chắc chắn muốn xoá bàn ăn này?</DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmOpen(false)}>Huỷ</Button>
+            <Button color="error" onClick={removeTable}>
+              Xoá
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
 
       <Dialog open={dialog.open} onClose={closeDialog} fullWidth maxWidth="sm">
         <DialogTitle>{dialog.item ? "Cập nhật bàn ăn" : "Thêm bàn ăn"}</DialogTitle>
@@ -262,6 +315,6 @@ export default function TablesPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </PageContainer>
+    </Box>
   );
 }
