@@ -85,6 +85,8 @@ const Sidebar = () => {
               <Box
                 sx={{
                   px: 3,
+                  pt: 1.5,
+                  pb: 0.5,
                 }}
               >
                 <Logo />
@@ -120,6 +122,8 @@ const Sidebar = () => {
           <Box
             sx={{
               px: 2,
+              pt: 1.5,
+              pb: 0.5,
             }}
           >
             <Logo />

@@ -12,18 +12,23 @@ const Logo = () => {
   );
   const TopbarHeight = config.topbarHeight;
   const isMini = isCollapse === "mini-sidebar" && !isSidebarHover;
+  const logoSize = isMini ? 40 : TopbarHeight;
 
   const LinkStyled = styled(Link)(() => ({
-    height: TopbarHeight,
-    width: isMini ? "40px" : "180px",
+    height: logoSize,
+    width: logoSize,
     overflow: "hidden",
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
   }));
 
-  // Logo theo theme (nền khớp sidebar). Ảnh vuông nên thu gọn vẫn hiển thị trọn.
-  const logoSrc =
-    activeMode === "dark" ? "/icons/logo-dark.png" : "/icons/logo-light.png";
+  // Thu gọn sidebar: chỉ hiện mark TT (favicon). Mở rộng: logo đầy đủ theo theme.
+  const logoSrc = isMini
+    ? "/icons/favicon.png"
+    : activeMode === "dark"
+      ? "/icons/logo-dark.png"
+      : "/icons/logo-light.png";
 
   return (
     <LinkStyled href="/">
@@ -31,12 +36,12 @@ const Logo = () => {
         src={logoSrc}
         alt="TunsTool"
         priority
-        width={isMini ? 40 : 180}
-        height={TopbarHeight}
+        width={logoSize}
+        height={logoSize}
         style={{
           objectFit: "contain",
-          width: isMini ? "40px" : "100%",
-          height: "100%",
+          width: logoSize,
+          height: logoSize,
         }}
       />
     </LinkStyled>

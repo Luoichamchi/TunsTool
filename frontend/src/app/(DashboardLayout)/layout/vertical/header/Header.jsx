@@ -42,8 +42,8 @@ const Header = () => {
     setIsMobileSidebar,
   } = useContext(CustomizerContext);
 
-  const brandLogo =
-    activeMode === "dark" ? "/icons/logo-dark.png" : "/icons/logo-light.png";
+  const brandLogo = "/icons/favicon.png";
+  const logoSize = isMobile ? 40 : 50;
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
     boxShadow: "none",
@@ -127,35 +127,12 @@ const Header = () => {
           sx={{
             ml: isMobile ? 0 : 1,
             minWidth: 0,
-            flex: isMobile ? 1 : undefined,
+            flex: isMobile && showTenantFilter ? 1 : undefined,
             overflow: "visible",
           }}
         >
           {!isMobile && <Search />}
-          {isMobile && !showTenantFilter ? (
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                minWidth: 0,
-              }}
-            >
-              <Box
-                component="img"
-                src={brandLogo}
-                alt="TunsTool"
-                sx={{
-                  height: 40,
-                  width: "auto",
-                  maxWidth: "100%",
-                  objectFit: "contain",
-                  borderRadius: "0",
-                  display: "block",
-                }}
-              />
-            </Box>
-          ) : (
+          {showTenantFilter && (
             <TenantFilterSelect
               sx={isMobile ? { flex: 1, width: "100%" } : undefined}
             />
@@ -167,29 +144,27 @@ const Header = () => {
               </>
             ) : null} */}
 
-        <Box
-          sx={{
-            flexGrow: isMobile ? 0 : 1,
-          }}
-        />
+        <Box sx={{ flexGrow: 1 }} />
         <Stack
           spacing={isMobile ? 0.25 : 0.5}
           direction="row"
           sx={{
             alignItems: "center",
             flexShrink: 0,
+            ml: "auto",
           }}
         >
-          {!isMobile && (
-            <Image
-              src={brandLogo}
-              priority
-              alt="TunsTool"
-              width={130}
-              height={50}
-              style={{ marginRight: "10px", objectFit: "contain" }}
-            />
-          )}
+          <Image
+            src={brandLogo}
+            priority
+            alt="TunsTool"
+            width={logoSize}
+            height={logoSize}
+            style={{
+              marginRight: isMobile ? "4px" : "10px",
+              objectFit: "contain",
+            }}
+          />
           <CustomizerHeaderButton size={isMobile ? "medium" : "large"} />
           { <Language size={isMobile ? "small" : "large"}/>}
           {/* <Cart /> */}
