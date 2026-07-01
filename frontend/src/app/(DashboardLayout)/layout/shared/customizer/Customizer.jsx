@@ -12,6 +12,7 @@ import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customi
 import Box from "@mui/material/Box";
 import { IconX, IconCheck } from "@tabler/icons-react";
 import Scrollbar from "@/app/components/custom-scroll/Scrollbar";
+import LanguageSettings from "./LanguageSettings";
 import WbSunnyTwoToneIcon from "@mui/icons-material/WbSunnyTwoTone";
 import DarkModeTwoToneIcon from "@mui/icons-material/DarkModeTwoTone";
 import CallToActionTwoToneIcon from "@mui/icons-material/CallToActionTwoTone";
@@ -172,6 +173,9 @@ const Customizer = () => {
                 Dark
               </StyledBox>
             </Stack>
+
+            <Box pt={3} />
+            <LanguageSettings />
 
             {/* <Box pt={3} />
             <Typography variant="h6" gutterBottom>

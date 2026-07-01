@@ -9,12 +9,11 @@ import { styled } from "@mui/material/styles";
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
 import config from "@/utils/config";
 
-import { IconMenu2, IconMoon, IconSun } from "@tabler/icons-react";
+import { IconMenu2 } from "@tabler/icons-react";
 import Notifications from "../../vertical/header/Notification";
 
 import Profile from "../../vertical/header/Profile";
 import Search from "../../vertical/header/Search";
-import Language from "../../vertical/header/Language";
 import Navigation from "../../vertical/header/Navigation";
 import Logo from "../../shared/logo/Logo";
 import TenantFilterSelect from "@/app/components/shared/TenantFilterSelect";
@@ -29,8 +28,6 @@ const Header = () => {
     isLayout,
     setIsMobileSidebar,
     isMobileSidebar,
-    activeMode,
-    setActiveMode,
   } = React.useContext(CustomizerContext);
   const TopbarHeight = config.topbarHeight;
 
@@ -98,22 +95,6 @@ const Header = () => {
             }}
           >
             <CustomizerHeaderButton />
-            <Language />
-            <IconButton size="large" color="inherit">
-              {activeMode === "light" ? (
-                <IconMoon
-                  size="21"
-                  stroke="1.5"
-                  onClick={() => setActiveMode("dark")}
-                />
-              ) : (
-                <IconSun
-                  size="21"
-                  stroke="1.5"
-                  onClick={() => setActiveMode("light")}
-                />
-              )}
-            </IconButton>
 
             <Notifications />
             <Profile />

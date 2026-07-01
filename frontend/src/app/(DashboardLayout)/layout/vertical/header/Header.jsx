@@ -10,12 +10,9 @@ import { useIsDefaultTenant } from "@/app/utils/auth/useIsDefaultTenant";
 import { usePathname } from "next/navigation";
 import config from "@/utils/config";
 import { useContext, useEffect } from "react";
-import Image from "next/image";
-// ...existing code...
-import { IconMenu2, IconMoon, IconSun } from "@tabler/icons-react";
+import { IconMenu2 } from "@tabler/icons-react";
 import Profile from "./Profile";
 import Search from "./Search";
-import Language from "./Language";
 import TenantFilterSelect from "@/app/components/shared/TenantFilterSelect";
 import CustomizerHeaderButton from "@/app/(DashboardLayout)/layout/shared/customizer/CustomizerHeaderButton";
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
@@ -35,15 +32,11 @@ const Header = () => {
   // drawer
   const {
     activeMode,
-    setActiveMode,
     setIsCollapse,
     isCollapse,
     isMobileSidebar,
     setIsMobileSidebar,
   } = useContext(CustomizerContext);
-
-  const brandLogo = "/icons/favicon.png";
-  const logoSize = isMobile ? 40 : 50;
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
     boxShadow: "none",
@@ -154,39 +147,8 @@ const Header = () => {
             ml: "auto",
           }}
         >
-          <Image
-            src={brandLogo}
-            priority
-            alt="TunsTool"
-            width={logoSize}
-            height={logoSize}
-            style={{
-              marginRight: isMobile ? "4px" : "10px",
-              objectFit: "contain",
-            }}
-          />
           <CustomizerHeaderButton size={isMobile ? "medium" : "large"} />
-          { <Language size={isMobile ? "small" : "large"}/>}
-          {/* <Cart /> */}
 
-          <IconButton size={isMobile ? "small" : "large"} color="inherit">
-            {activeMode === "light" ? (
-              <IconMoon
-                size={isMobile ? 20 : 21}
-                stroke="1.5"
-                onClick={() => setActiveMode("dark")}
-              />
-            ) : (
-              <IconSun
-                size={isMobile ? 20 : 21}
-                stroke="1.5"
-                onClick={() => setActiveMode("light")}
-              />
-            )}
-          </IconButton>
-
-          {/* <Notifications /> */}
-          {/* {lgDown ? <MobileRightSidebar /> : null} */}
           <Profile avatarSize={isMobile ? 28 : 35} />
         </Stack>
       </ToolbarStyled>
