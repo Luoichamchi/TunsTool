@@ -5,7 +5,7 @@ import { rawPostFetcher } from "@/app/api/globalFetcher";
 
 export const UserDataContext = createContext(undefined);
 
-const PUBLIC_PATHS = ["/login", "/tenant", "/auth/auth1/login"];
+const PUBLIC_PATHS = ["/login", "/tenant", "/auth/auth1/login", "/order"];
 
 export const UserDataProvider = ({ children }) => {
   const router = useRouter();

@@ -4,6 +4,21 @@ const api = {
   PUT_DEMO: "/api/demos",
   DELETE_DEMO: "/api/demos/",
   GET_TENANT_LIST: "/api/tenant/",
+  GET_PRODUCT_CATEGORY_LIST: "/api/product-categories",
+  POST_PRODUCT_CATEGORY: "/api/product-categories",
+  PUT_PRODUCT_CATEGORY: "/api/product-categories",
+  DELETE_PRODUCT_CATEGORY: "/api/product-categories/",
+  GET_PRODUCT_LIST: "/api/products",
+  POST_PRODUCT: "/api/products",
+  PUT_PRODUCT: "/api/products",
+  DELETE_PRODUCT: "/api/products/",
+  GET_TABLE_LIST: "/api/dining-tables",
+  POST_TABLE: "/api/dining-tables",
+  PUT_TABLE: "/api/dining-tables",
+  DELETE_TABLE: "/api/dining-tables/",
+  GET_ORDER_LIST: "/api/orders",
+  POST_ORDER_STATUS: "/api/orders",
+  GET_PUBLIC_MENU: "/api/public",
 };
 
 export default api;

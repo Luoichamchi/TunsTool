@@ -11,6 +11,11 @@ from api import (
     user,
     audit_log,
     tenant,
+    product_category,
+    product,
+    dining_table,
+    order,
+    public_order,
 )
 from database.audit_event import register_audit_events
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,6 +66,11 @@ api_router.include_router(demo.router)
 api_router.include_router(rbac.router)
 api_router.include_router(audit_log.router)
 api_router.include_router(tenant.router)
+api_router.include_router(product_category.router)
+api_router.include_router(product.router)
+api_router.include_router(dining_table.router)
+api_router.include_router(order.router)
+api_router.include_router(public_order.router)
 app.include_router(api_router)
 
 

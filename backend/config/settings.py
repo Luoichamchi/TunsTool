@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     SEED_USER_USERNAME: str = "user"
     SEED_USER_PASSWORD: str = "user123456"
     TENANT_DB_PREFIX: str = "app_"
+    MQTT_SERVER: str = ""
     CORS_ORIGIN_REGEX: str = (
         r"^https?://("
         r"([\w-]+\.)?localhost"

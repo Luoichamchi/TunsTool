@@ -17,7 +17,7 @@ export const useTenant = () => {
   return context;
 };
 
-const PUBLIC_PATHS = ["/login", "/tenant", "/auth/auth1/login"];
+const PUBLIC_PATHS = ["/login", "/tenant", "/auth/auth1/login", "/order"];
 
 export const TenantProvider = ({ children }) => {
   const router = useRouter();

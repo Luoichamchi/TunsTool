@@ -10,6 +10,10 @@ GLOBAL_MODULES = [
     ("audit_log", "Audit log management"),
     ("demo", "Demo data management"),
     ("tenant", "Tenant management"),
+    ("product_category", "Product category management"),
+    ("product", "Product management"),
+    ("dining_table", "Dining table management"),
+    ("order", "Order management"),
 ]
 
 GLOBAL_PERMISSIONS = [
@@ -41,6 +45,22 @@ GLOBAL_PERMISSIONS = [
     ("tenant.create", "Create tenants"),
     ("tenant.update", "Update tenants"),
     ("tenant.delete", "Delete tenants"),
+    ("product_category.view", "View product categories"),
+    ("product_category.create", "Create product categories"),
+    ("product_category.update", "Update product categories"),
+    ("product_category.delete", "Delete product categories"),
+    ("product.view", "View products"),
+    ("product.create", "Create products"),
+    ("product.update", "Update products"),
+    ("product.delete", "Delete products"),
+    ("dining_table.view", "View dining tables"),
+    ("dining_table.create", "Create dining tables"),
+    ("dining_table.update", "Update dining tables"),
+    ("dining_table.delete", "Delete dining tables"),
+    ("order.view", "View orders"),
+    ("order.create", "Create orders"),
+    ("order.update", "Update orders"),
+    ("order.delete", "Delete orders"),
 ]
 
 

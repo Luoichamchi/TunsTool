@@ -28,6 +28,19 @@ function getAuthHeaders(options = {}) {
     : { ...options.headers };
 }
 
+async function parseErrorResponse(res, fallbackMessage) {
+  let errorMessage = fallbackMessage;
+  try {
+    const errorData = await res.json();
+    if (errorData && errorData.detail) {
+      errorMessage = errorData.detail;
+    }
+  } catch (e) {
+    errorMessage = fallbackMessage;
+  }
+  throw new Error(errorMessage);
+}
+
 const getFetcher = (url, options = {}) => {
   let token = null;
   if (options.token) token = options.token;
@@ -111,16 +124,48 @@ const rawPostFetcher = async (url, arg, options = {}) => {
     ...options,
   });
   if (!res.ok) {
-    let errorMessage = "Failed to post data";
-    try {
-      const errorData = await res.json();
-      if (errorData && errorData.detail) {
-        errorMessage = errorData.detail;
-      }
-    } catch (e) {
-      throw new Error("Failed to post data");
-    }
-    throw new Error(errorMessage);
+    await parseErrorResponse(res, "Failed to post data");
+  }
+  return res.json();
+};
+
+const rawGetFetcher = async (url, options = {}) => {
+  const res = await fetch(buildUrl(url), {
+    method: "GET",
+    credentials: "include",
+    ...options,
+  });
+  if (!res.ok) {
+    await parseErrorResponse(res, "Failed to fetch data");
+  }
+  return res.json();
+};
+
+const publicGetFetcher = async (url, options = {}) => {
+  const res = await fetch(buildUrl(url), {
+    method: "GET",
+    ...options,
+  });
+  if (!res.ok) {
+    await parseErrorResponse(res, "Failed to fetch public data");
+  }
+  return res.json();
+};
+
+const publicPostFetcher = async (url, arg, options = {}) => {
+  const fallbackMessage = "Failed to post public data";
+  const isFormData = arg instanceof FormData;
+  const res = await fetch(buildUrl(url), {
+    method: "POST",
+    headers: {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(options.headers || {}),
+    },
+    body: isFormData ? arg : JSON.stringify(arg),
+    ...options,
+  });
+  if (!res.ok) {
+    await parseErrorResponse(res, fallbackMessage);
   }
   return res.json();
 };
@@ -238,4 +283,7 @@ export {
   deleteFetcher,
   patchFetcher,
   rawPostFetcher,
+  rawGetFetcher,
+  publicGetFetcher,
+  publicPostFetcher,
 };

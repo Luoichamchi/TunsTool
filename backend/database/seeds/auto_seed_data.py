@@ -6,6 +6,7 @@ from database.models.tenant import Tenant
 from database.seeds.role_seed import seed_default_roles
 from database.seeds.user_seed import seed_default_accounts
 from database.seeds.demo_seed import seed_default_demos
+from database.seeds.restaurant_menu_seed import seed_restaurant_menu
 from database.seeds.global_role_seed import seed_global_roles
 from database.seeds.global_permission_seed import seed_global_modules_and_permissions
 from database.seeds.root_user_seed import seed_root_user
@@ -30,6 +31,7 @@ async def seed_tenant_defaults(
         await seed_default_roles(db)
         await seed_default_accounts(db)
         await seed_default_demos(db)
+        await seed_restaurant_menu(db)
         print("Tenant database seed completed")
 
 
