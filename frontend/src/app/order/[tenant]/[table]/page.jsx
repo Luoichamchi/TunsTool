@@ -19,6 +19,7 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
 import { publicGetFetcher, publicPostFetcher } from "@/app/api/globalFetcher";
+import SessionOrderedItems from "@/app/order/SessionOrderedItems";
 
 function CartQuantityButton({ onClick, children }) {
   return (
@@ -71,8 +72,8 @@ export default function PublicOrderPage() {
   const sessionUnavailable = sessionEnded || (!tableLoading && !tableInfo && tableError);
 
   const categories = useMemo(() => menuData?.categories || [], [menuData]);
-  const sessionOrderCount = sessionOrdersData?.order_count || 0;
   const sessionTotalAmount = Number(sessionOrdersData?.total_amount || 0);
+  const sessionOrderCount = sessionOrdersData?.order_count || 0;
 
   const cartItems = useMemo(() => {
     const productMap = new Map();
@@ -181,13 +182,10 @@ export default function PublicOrderPage() {
             <Typography variant="body1" color="text.secondary" mt={1}>
               {tableInfo ? `${tableInfo.name} (${tableInfo.table_code})` : "Đang tải thông tin bàn..."}
             </Typography>
-            {sessionOrderCount > 0 ? (
-              <Typography variant="body1" color="primary.main" fontWeight={600} mt={1}>
-                Đã gọi {sessionOrderCount} đơn · Tổng bàn: {sessionTotalAmount.toLocaleString("vi-VN")} đ
-              </Typography>
-            ) : null}
           </CardContent>
         </Card>
+
+        <SessionOrderedItems sessionOrdersData={sessionOrdersData} />
 
         {categories.map((category) => (
           <Card key={category.id} variant="outlined">
@@ -299,12 +297,14 @@ export default function PublicOrderPage() {
             />
             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
               <Box>
-                <Typography variant="h6" color="primary.main">
-                  Giỏ hiện tại: {totalAmount.toLocaleString("vi-VN")} đ
-                </Typography>
-                {sessionOrderCount > 0 ? (
+                {cartItems.length > 0 ? (
+                  <Typography variant="h6" color="primary.main">
+                    Giỏ đang chọn: {totalAmount.toLocaleString("vi-VN")} đ
+                  </Typography>
+                ) : null}
+                {sessionOrderCount > 0 && cartItems.length > 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    Tổng bàn (gồm {sessionOrderCount} đơn đã gọi):{" "}
+                    Tổng bàn sau khi gửi:{" "}
                     {(sessionTotalAmount + totalAmount).toLocaleString("vi-VN")} đ
                   </Typography>
                 ) : null}

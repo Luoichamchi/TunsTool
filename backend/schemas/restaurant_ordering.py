@@ -170,6 +170,7 @@ class OrderResponse(BaseModel):
     note: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
+    served_at: Optional[datetime] = None
     items: List[OrderItemResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

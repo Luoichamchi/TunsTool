@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import mqtt from "mqtt";
 import {
-  Badge,
   Box,
   Button,
   Card,
@@ -12,13 +11,10 @@ import {
   Chip,
   Collapse,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
   Stack,
+  Tab,
+  Tabs,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { toast } from "react-toastify";
@@ -73,20 +69,27 @@ function playBeep() {
 }
 
 export default function OrdersPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { tenantCode } = useTenant();
   const { mqttServer } = useRuntimeConfig();
   const [selectedStatus, setSelectedStatus] = useState("pending");
+  const [mqttConnected, setMqttConnected] = useState(false);
   const clientRef = useRef(null);
+  const mutateOrdersRef = useRef(() => {});
+  const mutateSummaryRef = useRef(() => {});
 
   const ordersUrl = `${api.GET_ORDER_LIST}?page=1&page_size=100`;
+  const pollInterval = mqttConnected ? 30000 : 5000;
   const { data: ordersData, mutate: mutateOrders } = useSWR(ordersUrl, getFetcher, {
-    refreshInterval: 5000,
+    refreshInterval: pollInterval,
   });
   const { data: summaryData, mutate: mutateSummary } = useSWR("/api/orders/summary", getFetcher, {
-    refreshInterval: 5000,
+    refreshInterval: pollInterval,
   });
+
+  useEffect(() => {
+    mutateOrdersRef.current = mutateOrders;
+    mutateSummaryRef.current = mutateSummary;
+  }, [mutateOrders, mutateSummary]);
 
   const orders = useMemo(() => ordersData?.data || [], [ordersData]);
   const unpaidByTable = useMemo(() => {
@@ -117,7 +120,6 @@ export default function OrdersPage() {
     return map;
   }, [orders]);
 
-  const selectedMenu = STATUS_MENU.find((item) => item.key === selectedStatus);
   const visibleOrders = groupedOrders[selectedStatus] || [];
   const servedTableGroups = useMemo(
     () => (selectedStatus === "served" ? groupOrdersByTable(visibleOrders) : []),
@@ -139,12 +141,16 @@ export default function OrdersPage() {
 
   useEffect(() => {
     const mqttUrl = normalizeMqttUrl(mqttServer);
-    if (!mqttUrl || !tenantCode) return;
+    if (!mqttUrl || !tenantCode) {
+      setMqttConnected(false);
+      return undefined;
+    }
 
     const client = mqtt.connect(mqttUrl, { clean: true });
     clientRef.current = client;
 
     client.on("connect", () => {
+      setMqttConnected(true);
       client.subscribe(`TunsTool/${tenantCode}/orders`);
     });
 
@@ -155,18 +161,24 @@ export default function OrdersPage() {
           playBeep();
           toast.info(`Có cập nhật đơn từ bàn ${payload.table_code || ""}`.trim());
         }
-        mutateOrders();
-        mutateSummary();
+        mutateOrdersRef.current();
+        mutateSummaryRef.current();
       } catch (error) {
         console.error("MQTT parse error", error);
       }
     });
 
+    const markDisconnected = () => setMqttConnected(false);
+    client.on("close", markDisconnected);
+    client.on("offline", markDisconnected);
+    client.on("error", markDisconnected);
+
     return () => {
+      markDisconnected();
       client.end(true);
       clientRef.current = null;
     };
-  }, [mqttServer, tenantCode, mutateOrders, mutateSummary]);
+  }, [mqttServer, tenantCode]);
 
   const markTablePaid = async (tableId) => {
     try {
@@ -190,117 +202,69 @@ export default function OrdersPage() {
     }
   };
 
-  const statusMenu = (
-    <List
-      component="nav"
-      disablePadding
+  const statusTabs = (
+    <Tabs
+      value={selectedStatus}
+      onChange={(_event, value) => setSelectedStatus(value)}
+      variant="scrollable"
+      scrollButtons="auto"
+      allowScrollButtonsMobile
       sx={{
-        display: "flex",
-        flexDirection: isMobile ? "row" : "column",
-        flexWrap: isMobile ? "wrap" : "nowrap",
-        gap: 0.5,
-        p: isMobile ? 0 : 1,
+        px: { xs: 0.5, md: 1 },
+        borderBottom: 1,
+        borderColor: "divider",
+        bgcolor: "background.default",
+        minHeight: 48,
+        "& .MuiTab-root": {
+          minHeight: 48,
+          textTransform: "none",
+          fontWeight: 500,
+          fontSize: "0.95rem",
+        },
       }}
     >
       {STATUS_MENU.map((item) => {
         const count = summaryData?.[item.key] ?? groupedOrders[item.key]?.length ?? 0;
         const selected = selectedStatus === item.key;
         return (
-          <ListItemButton
+          <Tab
             key={item.key}
-            selected={selected}
-            onClick={() => setSelectedStatus(item.key)}
-            sx={{
-              borderRadius: 1,
-              mb: isMobile ? 0 : 0.5,
-              px: 2,
-              py: 1.25,
-              minWidth: isMobile ? "auto" : "100%",
-              flex: isMobile ? "1 1 auto" : "none",
-              color: selected ? "primary.contrastText" : "text.secondary",
-              bgcolor: selected ? "primary.main" : "transparent",
-              "&.Mui-selected": {
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
-                "&:hover": { bgcolor: "primary.dark" },
-              },
-              "&:hover": {
-                bgcolor: selected ? "primary.dark" : "primary.light",
-                color: selected ? "primary.contrastText" : "primary.main",
-              },
-            }}
-          >
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{
-                fontWeight: selected ? 700 : 500,
-                fontSize: "0.95rem",
-              }}
-            />
-            <Badge
-              badgeContent={count}
-              color={selected ? "default" : "primary"}
-              sx={{
-                ml: 1,
-                "& .MuiBadge-badge": {
-                  position: "static",
-                  transform: "none",
-                  bgcolor: selected ? "rgba(255,255,255,0.25)" : undefined,
-                  color: selected ? "inherit" : undefined,
-                },
-              }}
-            />
-          </ListItemButton>
+            value={item.key}
+            label={
+              <Stack direction="row" alignItems="center" spacing={0.75}>
+                <span>{item.label}</span>
+                <Chip
+                  label={count}
+                  size="small"
+                  color={selected ? "primary" : "default"}
+                  variant={selected ? "filled" : "outlined"}
+                  sx={{ height: 22, "& .MuiChip-label": { px: 0.75, fontSize: "0.75rem" } }}
+                />
+              </Stack>
+            }
+          />
         );
       })}
-    </List>
+    </Tabs>
   );
 
   return (
     <PageContainer title="Quản lý đơn hàng" description="Theo dõi đơn hàng realtime từ khách quét QR">
       <Card variant="outlined" sx={{ overflow: "hidden", mb: 2 }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            minHeight: isMobile ? "auto" : "calc(100vh - 220px)",
-          }}
-        >
-          <Box
-            sx={{
-              width: isMobile ? "100%" : 240,
-              flexShrink: 0,
-              borderRight: isMobile ? "none" : 1,
-              borderBottom: isMobile ? 1 : 0,
-              borderColor: "divider",
-              bgcolor: "background.default",
-            }}
-          >
-            {!isMobile && (
-              <Box sx={{ px: 2, py: 2, borderBottom: 1, borderColor: "divider" }}>
-                <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
-                  Trạng thái
-                </Typography>
-              </Box>
-            )}
-            {statusMenu}
-          </Box>
+        {statusTabs}
 
-          <Box sx={{ flex: 1, p: { xs: 2, md: 3 }, minWidth: 0 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h5" fontWeight={700}>
-                {selectedMenu?.label || selectedStatus}
-              </Typography>
-              <Chip
-                label={
-                  selectedStatus === "served"
-                    ? `${servedTableGroups.length} bàn · ${visibleOrders.length} đơn`
-                    : `${visibleOrders.length} đơn`
-                }
-                color="primary"
-                size="small"
-              />
-            </Stack>
+        <Box sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
+          <Stack direction="row" justifyContent="flex-end" alignItems="center" mb={2}>
+            <Chip
+              label={
+                selectedStatus === "served"
+                  ? `${servedTableGroups.length} bàn · ${visibleOrders.length} đơn`
+                  : `${visibleOrders.length} đơn`
+              }
+              color="primary"
+              size="small"
+            />
+          </Stack>
 
             {visibleOrders.length === 0 ? (
               <Box
@@ -346,7 +310,6 @@ export default function OrdersPage() {
                 })}
               </Stack>
             )}
-          </Box>
         </Box>
       </Card>
 
@@ -408,6 +371,73 @@ const FORWARD_STATUS_ACTIONS = [
   { key: "preparing", label: "Đang chuẩn bị", status: "preparing" },
   { key: "served", label: "Đã phục vụ", status: "served" },
 ];
+
+const ORDER_CARD_GRID = {
+  xs: "1fr auto",
+  sm: "minmax(110px, auto) minmax(110px, auto) 1fr auto",
+};
+
+const ORDER_CARD_AREAS = {
+  xs: `"table timer" "price price" "items items"`,
+};
+
+function getOrderServedEndAt(order) {
+  if (order.served_at) return order.served_at;
+  if (order.status === "served" && order.updated_at) return order.updated_at;
+  return null;
+}
+
+function getOrderTimerRange(order) {
+  return { startAt: order.created_at, endAt: getOrderServedEndAt(order) };
+}
+
+function getGroupTimerRange(orders) {
+  const startAt = orders.reduce((earliest, order) => {
+    if (!earliest) return order.created_at;
+    return new Date(order.created_at) < new Date(earliest) ? order.created_at : earliest;
+  }, null);
+  const ends = orders.map(getOrderServedEndAt).filter(Boolean);
+  if (ends.length !== orders.length) {
+    return { startAt, endAt: null };
+  }
+  const endAt = ends.reduce((latest, value) => {
+    if (!latest) return value;
+    return new Date(value) > new Date(latest) ? value : latest;
+  }, null);
+  return { startAt, endAt };
+}
+
+function formatElapsed(ms) {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+}
+
+function OrderElapsedTimer({ startAt, endAt }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (endAt) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [endAt, startAt]);
+
+  const endMs = endAt ? new Date(endAt).getTime() : now;
+  const elapsed = formatElapsed(endMs - new Date(startAt).getTime());
+
+  return (
+    <Typography
+      variant="subtitle1"
+      fontWeight={700}
+      fontFamily="monospace"
+      color="text.secondary"
+      sx={{ minWidth: 52, textAlign: "right" }}
+    >
+      {elapsed}
+    </Typography>
+  );
+}
 
 function buildStatusActions({ currentStatus, isPaid, onStatusChange, onMarkTablePaid }) {
   const currentIndex = ORDER_STATUS_FLOW.indexOf(currentStatus);
@@ -530,6 +560,7 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
     onStatusChange: (status) => onUpdateGroupStatus(orderIds, status),
     onMarkTablePaid: !group.allPaid ? () => onMarkTablePaid(group.table_id) : undefined,
   });
+  const timerRange = getGroupTimerRange(group.orders);
 
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
@@ -537,15 +568,13 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "minmax(110px, auto) minmax(110px, auto) 1fr",
-            },
+            gridTemplateColumns: ORDER_CARD_GRID,
+            gridTemplateAreas: ORDER_CARD_AREAS,
             gap: { xs: 1.5, sm: 2 },
             alignItems: "center",
           }}
         >
-          <Box>
+          <Box sx={{ gridArea: { xs: "table", sm: "auto" } }}>
             <Typography fontWeight={700} noWrap>
               {formatTableLabel(group)}
             </Typography>
@@ -554,7 +583,7 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
             </Typography>
           </Box>
 
-          <Box>
+          <Box sx={{ gridArea: { xs: "price", sm: "auto" } }}>
             <Typography variant="h6" color="primary.main" fontWeight={700} noWrap>
               {group.total.toLocaleString("vi-VN")} đ
             </Typography>
@@ -565,7 +594,7 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
             ) : null}
           </Box>
 
-          <Box sx={{ minWidth: 0, gridColumn: { xs: "1 / -1", sm: "auto" } }}>
+          <Box sx={{ minWidth: 0, gridArea: { xs: "items", sm: "auto" } }}>
             <Stack
               direction="row"
               alignItems="center"
@@ -610,6 +639,10 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
               </Stack>
             </Collapse>
           </Box>
+
+          <Box sx={{ gridArea: { xs: "timer", sm: "auto" }, justifySelf: "end", alignSelf: "start" }}>
+            <OrderElapsedTimer startAt={timerRange.startAt} endAt={timerRange.endAt} />
+          </Box>
         </Box>
 
         <StatusActionBar actions={statusActions} />
@@ -632,6 +665,7 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
     isPaid: order.is_paid,
     onStatusChange: (status) => onUpdateStatus(order.id, status),
   });
+  const timerRange = getOrderTimerRange(order);
 
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
@@ -639,15 +673,13 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "minmax(110px, auto) minmax(110px, auto) 1fr",
-            },
+            gridTemplateColumns: ORDER_CARD_GRID,
+            gridTemplateAreas: ORDER_CARD_AREAS,
             gap: { xs: 1.5, sm: 2 },
             alignItems: "center",
           }}
         >
-          <Box>
+          <Box sx={{ gridArea: { xs: "table", sm: "auto" } }}>
             <Typography fontWeight={700} noWrap>
               {formatTableLabel(order)}
             </Typography>
@@ -656,7 +688,7 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
             </Typography>
           </Box>
 
-          <Box>
+          <Box sx={{ gridArea: { xs: "price", sm: "auto" } }}>
             <Typography variant="h6" color="primary.main" fontWeight={700} noWrap>
               {Number(order.total_amount || 0).toLocaleString("vi-VN")} đ
             </Typography>
@@ -667,7 +699,7 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
             ) : null}
           </Box>
 
-          <Box sx={{ minWidth: 0, gridColumn: { xs: "1 / -1", sm: "auto" } }}>
+          <Box sx={{ minWidth: 0, gridArea: { xs: "items", sm: "auto" } }}>
             <Stack
               direction="row"
               alignItems="center"
@@ -702,6 +734,10 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
                 Ghi chú: {order.note}
               </Typography>
             )}
+          </Box>
+
+          <Box sx={{ gridArea: { xs: "timer", sm: "auto" }, justifySelf: "end", alignSelf: "start" }}>
+            <OrderElapsedTimer startAt={timerRange.startAt} endAt={timerRange.endAt} />
           </Box>
         </Box>
 

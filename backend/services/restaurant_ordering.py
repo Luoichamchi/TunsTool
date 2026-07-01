@@ -530,6 +530,7 @@ class OrderService:
             note=row.note,
             created_at=row.created_at,
             updated_at=row.updated_at,
+            served_at=row.served_at,
             items=[self._serialize_item(item) for item in sorted(row.items, key=lambda x: (x.batch_no, x.id))],
         )
 
@@ -594,6 +595,8 @@ class OrderService:
         if not row:
             raise HTTPException(status_code=404, detail="Order not found")
         row.status = payload.status
+        if payload.status == "served" and not row.served_at:
+            row.served_at = datetime.now(timezone.utc)
         if payload.status in {"completed", "cancelled"} and not row.is_paid:
             row.is_paid = payload.status == "completed"
         await self.db.commit()

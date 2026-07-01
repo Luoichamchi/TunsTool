@@ -111,6 +111,7 @@ class Order(BaseModel):
     is_paid: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    served_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     table: Mapped["DiningTable"] = relationship(
         "DiningTable",
