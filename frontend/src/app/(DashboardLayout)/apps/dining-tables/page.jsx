@@ -119,11 +119,11 @@ export default function DiningTablesPage() {
   };
 
   return (
-    <PageContainer title="Phục vụ bàn ăn" description="Nhận bàn, hiển thị QR phiên phục vụ cho khách đặt món">
+    <PageContainer title="Sơ đồ bàn" description="Theo dõi trạng thái bàn, nhận/trả bàn và phát QR cho khách đặt món">
       <Card variant="outlined">
         <CardContent>
           <Typography variant="h5" fontWeight={700} mb={2}>
-            Bàn ăn
+            Sơ đồ bàn
           </Typography>
           <TextField
             fullWidth

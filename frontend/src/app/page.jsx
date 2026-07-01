@@ -12,7 +12,7 @@ export default function HomePage() {
         : null;
 
     if (token) {
-      router.replace('/apps/demos-v2');
+      router.replace('/apps/dining-tables');
     } else {
       router.replace('/login');
     }

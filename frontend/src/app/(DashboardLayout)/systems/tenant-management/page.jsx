@@ -65,7 +65,7 @@ export default function TenantManagementPage() {
 
   useEffect(() => {
     if (!isDefaultTenant) {
-      router.replace("/apps/demos-v2");
+      router.replace("/apps/dining-tables");
     }
   }, [isDefaultTenant, router]);
 

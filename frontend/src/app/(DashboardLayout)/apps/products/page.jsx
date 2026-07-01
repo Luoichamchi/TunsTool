@@ -8,16 +8,24 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
   FormControlLabel,
-  Grid,
+  IconButton,
   MenuItem,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
@@ -52,6 +60,19 @@ const emptyProduct = {
   image_file: null,
 };
 
+const tableSx = {
+  minWidth: 650,
+  borderCollapse: "collapse",
+  border: (theme) =>
+    `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#e0e0e0"}`,
+  "& .MuiTableCell-root": {
+    border: (theme) =>
+      `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#e0e0e0"}`,
+    textAlign: "center",
+    padding: "8px 12px",
+  },
+};
+
 function toProductFormData(form) {
   const payload = new FormData();
   if (form.category_id !== "") payload.append("category_id", form.category_id);
@@ -67,6 +88,10 @@ function toProductFormData(form) {
 export default function ProductsPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
+  const [categoryPage, setCategoryPage] = useState(0);
+  const [categoryPageSize, setCategoryPageSize] = useState(10);
+  const [productPage, setProductPage] = useState(0);
+  const [productPageSize, setProductPageSize] = useState(10);
   const [categoryDialog, setCategoryDialog] = useState({ open: false, item: null });
   const [productDialog, setProductDialog] = useState({ open: false, item: null });
   const [categoryForm, setCategoryForm] = useState(emptyCategory);
@@ -79,13 +104,17 @@ export default function ProductsPage() {
   const canUpdateProduct = useHasPermission("product", "update");
   const canDeleteProduct = useHasPermission("product", "delete");
 
-  const categoriesUrl = `${api.GET_PRODUCT_CATEGORY_LIST}?page=1&page_size=100&search=${encodeURIComponent(categorySearch)}`;
-  const productsUrl = `${api.GET_PRODUCT_LIST}?page=1&page_size=100&search=${encodeURIComponent(productSearch)}`;
-  const { data: categoriesData, mutate: mutateCategories } = useSWR(categoriesUrl, getFetcher);
-  const { data: productsData, mutate: mutateProducts } = useSWR(productsUrl, getFetcher);
+  const categoriesUrl = `${api.GET_PRODUCT_CATEGORY_LIST}?page=${categoryPage + 1}&page_size=${categoryPageSize}&search=${encodeURIComponent(categorySearch)}`;
+  const productsUrl = `${api.GET_PRODUCT_LIST}?page=${productPage + 1}&page_size=${productPageSize}&search=${encodeURIComponent(productSearch)}`;
+  const { data: categoriesData, mutate: mutateCategories, isLoading: categoriesLoading } =
+    useSWR(categoriesUrl, getFetcher);
+  const { data: productsData, mutate: mutateProducts, isLoading: productsLoading } =
+    useSWR(productsUrl, getFetcher);
 
   const categories = useMemo(() => categoriesData?.data || [], [categoriesData]);
   const products = useMemo(() => productsData?.data || [], [productsData]);
+  const categoryTotal = categoriesData?.total || 0;
+  const productTotal = productsData?.total || 0;
 
   const categoryOptions = useMemo(
     () => categories.filter((item) => item.is_active),
@@ -209,55 +238,98 @@ export default function ProductsPage() {
                 Thêm loại
               </Button>
             </Stack>
-            <TextField
-              fullWidth
-              placeholder="Tìm loại mặt hàng..."
-              value={categorySearch}
-              onChange={(e) => setCategorySearch(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Grid container spacing={2}>
-              {categories.map((item) => (
-                <Grid key={item.id} size={{ xs: 12, md: 6, lg: 4 }}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Stack direction="row" justifyContent="space-between" alignItems="start">
-                        <Box>
-                          <Typography fontWeight={700}>{item.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {item.description || "Không có mô tả"}
+            <Box mb={2} maxWidth={400}>
+              <TextField
+                fullWidth
+                placeholder="Tìm loại mặt hàng..."
+                value={categorySearch}
+                onChange={(e) => {
+                  setCategorySearch(e.target.value);
+                  setCategoryPage(0);
+                }}
+              />
+            </Box>
+            <TableContainer>
+              <Table sx={tableSx}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Tên loại</TableCell>
+                    <TableCell>Mô tả</TableCell>
+                    <TableCell>Thứ tự</TableCell>
+                    <TableCell>Trạng thái</TableCell>
+                    <TableCell>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {categoriesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        <CircularProgress size={28} />
+                      </TableCell>
+                    </TableRow>
+                  ) : categories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        Không có dữ liệu
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    categories.map((item) => (
+                      <TableRow key={item.id} hover>
+                        <TableCell>{item.id}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell sx={{ textAlign: "left", maxWidth: 240 }}>
+                          <Typography variant="body2" noWrap title={item.description || ""}>
+                            {item.description || "—"}
                           </Typography>
-                        </Box>
-                        <Chip
-                          label={item.is_active ? "Đang dùng" : "Ẩn"}
-                          color={item.is_active ? "success" : "default"}
-                          size="small"
-                        />
-                      </Stack>
-                      <Stack direction="row" spacing={1} mt={2}>
-                        <Button
-                          size="small"
-                          startIcon={<IconEdit size={16} />}
-                          onClick={() => openCategoryDialog(item)}
-                          disabled={!canUpdateCategory}
-                        >
-                          Sửa
-                        </Button>
-                        <Button
-                          size="small"
-                          color="error"
-                          startIcon={<IconTrash size={16} />}
-                          onClick={() => removeCategory(item.id)}
-                          disabled={!canDeleteCategory}
-                        >
-                          Xoá
-                        </Button>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                        </TableCell>
+                        <TableCell>{item.sort_order}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={item.is_active ? "Đang dùng" : "Ẩn"}
+                            color={item.is_active ? "success" : "default"}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5} justifyContent="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => openCategoryDialog(item)}
+                              disabled={!canUpdateCategory}
+                            >
+                              <IconEdit size={18} />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => removeCategory(item.id)}
+                              disabled={!canDeleteCategory}
+                            >
+                              <IconTrash size={18} />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={categoryTotal}
+              page={categoryPage}
+              onPageChange={(_, newPage) => setCategoryPage(newPage)}
+              rowsPerPage={categoryPageSize}
+              onRowsPerPageChange={(e) => {
+                setCategoryPageSize(parseInt(e.target.value, 10));
+                setCategoryPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Số dòng:"
+            />
           </CardContent>
         </Card>
 
@@ -276,89 +348,130 @@ export default function ProductsPage() {
                 Thêm mặt hàng
               </Button>
             </Stack>
-            <TextField
-              fullWidth
-              placeholder="Tìm mặt hàng..."
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Grid container spacing={2}>
-              {products.map((item) => (
-                <Grid key={item.id} size={{ xs: 12, md: 6 }}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Stack direction="row" spacing={2}>
-                        <Box
-                          sx={{
-                            width: 96,
-                            height: 96,
-                            borderRadius: 2,
-                            overflow: "hidden",
-                            bgcolor: "action.hover",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {item.image_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                          ) : (
-                            <Typography variant="caption">No image</Typography>
-                          )}
-                        </Box>
-                        <Box flex={1}>
-                          <Stack direction="row" justifyContent="space-between" alignItems="start">
-                            <Box>
-                              <Typography fontWeight={700}>{item.name}</Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {item.category_name || "Chưa phân loại"}
+            <Box mb={2} maxWidth={400}>
+              <TextField
+                fullWidth
+                placeholder="Tìm mặt hàng..."
+                value={productSearch}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  setProductPage(0);
+                }}
+              />
+            </Box>
+            <TableContainer>
+              <Table sx={tableSx}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Ảnh</TableCell>
+                    <TableCell>Tên món</TableCell>
+                    <TableCell>Loại</TableCell>
+                    <TableCell>Giá</TableCell>
+                    <TableCell>Trạng thái</TableCell>
+                    <TableCell>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {productsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        <CircularProgress size={28} />
+                      </TableCell>
+                    </TableRow>
+                  ) : products.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        Không có dữ liệu
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    products.map((item) => (
+                      <TableRow key={item.id} hover>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 1,
+                              overflow: "hidden",
+                              bgcolor: "action.hover",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              mx: "auto",
+                            }}
+                          >
+                            {item.image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">
+                                —
                               </Typography>
-                            </Box>
-                            <Chip
-                              label={item.is_available ? "Sẵn sàng" : "Hết món"}
-                              color={item.is_available ? "success" : "warning"}
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "left" }}>
+                          <Typography fontWeight={600}>{item.name}</Typography>
+                          {item.description && (
+                            <Typography variant="caption" color="text.secondary" noWrap display="block">
+                              {item.description}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>{item.category_name || "Chưa phân loại"}</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: "primary.main" }}>
+                          {Number(item.price || 0).toLocaleString("vi-VN")} đ
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={item.is_available ? "Sẵn sàng" : "Hết món"}
+                            color={item.is_available ? "success" : "warning"}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5} justifyContent="center">
+                            <IconButton
                               size="small"
-                            />
-                          </Stack>
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            {item.description || "Không có mô tả"}
-                          </Typography>
-                          <Typography variant="h6" color="primary.main" sx={{ mt: 1 }}>
-                            {Number(item.price || 0).toLocaleString("vi-VN")} đ
-                          </Typography>
-                          <Stack direction="row" spacing={1} mt={2}>
-                            <Button
-                              size="small"
-                              startIcon={<IconEdit size={16} />}
                               onClick={() => openProductDialog(item)}
                               disabled={!canUpdateProduct}
                             >
-                              Sửa
-                            </Button>
-                            <Button
+                              <IconEdit size={18} />
+                            </IconButton>
+                            <IconButton
                               size="small"
                               color="error"
-                              startIcon={<IconTrash size={16} />}
                               onClick={() => removeProduct(item.id)}
                               disabled={!canDeleteProduct}
                             >
-                              Xoá
-                            </Button>
+                              <IconTrash size={18} />
+                            </IconButton>
                           </Stack>
-                        </Box>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={productTotal}
+              page={productPage}
+              onPageChange={(_, newPage) => setProductPage(newPage)}
+              rowsPerPage={productPageSize}
+              onRowsPerPageChange={(e) => {
+                setProductPageSize(parseInt(e.target.value, 10));
+                setProductPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Số dòng:"
+            />
           </CardContent>
         </Card>
       </Stack>

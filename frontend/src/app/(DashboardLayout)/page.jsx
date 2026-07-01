@@ -6,7 +6,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/apps/demos-v2');
+    router.replace('/apps/dining-tables');
   }, [router]);
 
   return null;

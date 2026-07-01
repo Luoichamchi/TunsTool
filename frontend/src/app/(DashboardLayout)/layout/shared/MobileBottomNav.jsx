@@ -19,7 +19,7 @@ import {
   useTheme,
 } from "@mui/material";
 import {
-  IconNotebook,
+  IconArmchair2,
   IconSettings,
   IconMenu2,
   IconUsers,
@@ -35,9 +35,9 @@ import { useIsDefaultTenant } from "@/app/utils/auth/useIsDefaultTenant";
 
 const NAV_ITEMS = [
   {
-    label: "Demo",
-    icon: <IconNotebook size={22} />,
-    href: "/apps/demos-v2",
+    label: "Sơ đồ bàn",
+    icon: <IconArmchair2 size={22} />,
+    href: "/apps/dining-tables",
   },
 ];
 

@@ -179,13 +179,14 @@ const putFetcher = (url, arg, options = {}) => {
     token = localStorage.getItem("access_token");
   if (!token) return Promise.resolve(null);
   const doFetch = async () => {
+    const isFormData = arg instanceof FormData;
     const res = await fetch(buildUrl(appendTenantCodeToUrl(url, options)), {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...getAuthHeaders({ ...options, token }),
       },
-      body: JSON.stringify(arg),
+      body: isFormData ? arg : JSON.stringify(arg),
       ...options,
     });
     if (res.status === 401) {

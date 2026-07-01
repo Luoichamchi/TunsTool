@@ -174,7 +174,7 @@ const AuthLogin = ({ title, subtitle, subtext, isMobile = false }) => {
     setLoading(false);
 
     if (result.success) {
-      router.push("/apps/demos-v2");
+      router.push("/apps/dining-tables");
     } else {
       setError(result.message || "Đăng nhập thất bại");
     }

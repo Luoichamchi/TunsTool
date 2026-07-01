@@ -16,11 +16,11 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
-    title: "Demo CRUD",
-    icon: IconNotebook,
+    title: "DiningTables",
+    icon: IconFileCheck,
     chipColor: "secondary",
-    href: "/apps/demos-v2",
-    permission: "demo.view",
+    href: "/apps/dining-tables",
+    permission: "dining_table.view",
   },
   {
     id: uniqueId(),
@@ -36,14 +36,6 @@ const Menuitems = [
     icon: IconPackage,
     chipColor: "secondary",
     href: "/apps/tables",
-    permission: "dining_table.view",
-  },
-  {
-    id: uniqueId(),
-    title: "DiningTables",
-    icon: IconFileCheck,
-    chipColor: "secondary",
-    href: "/apps/dining-tables",
     permission: "dining_table.view",
   },
   {
