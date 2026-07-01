@@ -3,9 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies import get_current_user, get_db
 from schemas import (
+    CloseTableRequest,
     DiningTableCreate,
     DiningTableResponse,
     DiningTableUpdate,
+    OpenTableResponse,
     PaginatedDiningTableResponse,
 )
 from services.restaurant_ordering import DiningTableService
@@ -64,5 +66,32 @@ async def delete_dining_table(
     service = DiningTableService(db)
     try:
         return await service.delete_for(current_user.id, table_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+@router.post("/{table_id}/open", response_model=OpenTableResponse)
+async def open_dining_table(
+    table_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    service = DiningTableService(db)
+    try:
+        return await service.open_table_for(current_user.id, table_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+@router.post("/{table_id}/close", response_model=DiningTableResponse)
+async def close_dining_table(
+    table_id: int,
+    payload: CloseTableRequest = CloseTableRequest(),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    service = DiningTableService(db)
+    try:
+        return await service.close_table_for(current_user.id, table_id, payload)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc))

@@ -7,6 +7,7 @@ from schemas import (
     OrderResponse,
     OrderStatusUpdate,
     PaginatedOrderResponse,
+    TablePaymentResponse,
 )
 from services.restaurant_ordering import OrderService, get_order_summary_counts
 
@@ -37,6 +38,20 @@ async def get_order_summary(
     try:
         await service.get_all_for(current_user.id, 1, 1, None)
         return await get_order_summary_counts(db)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+@router.post("/tables/{table_id}/mark-paid", response_model=TablePaymentResponse)
+async def mark_table_paid(
+    table_id: int,
+    payload: OrderPaymentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    service = OrderService(db)
+    try:
+        return await service.mark_table_payment_for(current_user.id, table_id, payload)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc))
 

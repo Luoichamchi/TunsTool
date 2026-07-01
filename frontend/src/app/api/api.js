@@ -16,8 +16,11 @@ const api = {
   POST_TABLE: "/api/dining-tables",
   PUT_TABLE: "/api/dining-tables",
   DELETE_TABLE: "/api/dining-tables/",
+  OPEN_TABLE: "/api/dining-tables",
+  CLOSE_TABLE: "/api/dining-tables",
   GET_ORDER_LIST: "/api/orders",
   POST_ORDER_STATUS: "/api/orders",
+  MARK_TABLE_PAID: "/api/orders/tables",
   GET_PUBLIC_MENU: "/api/public",
 };
 

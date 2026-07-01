@@ -38,7 +38,9 @@ async function parseErrorResponse(res, fallbackMessage) {
   } catch (e) {
     errorMessage = fallbackMessage;
   }
-  throw new Error(errorMessage);
+  const error = new Error(errorMessage);
+  error.status = res.status;
+  throw error;
 }
 
 const getFetcher = (url, options = {}) => {

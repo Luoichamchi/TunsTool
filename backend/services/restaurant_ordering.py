@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -8,11 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database.context import current_tenant_code
-from database.models import DiningTable, Order, OrderItem, Product, ProductCategory
+from database.models import DiningTable, Order, OrderItem, Product, ProductCategory, TableSession
 from schemas import (
+    CloseTableRequest,
     DiningTableCreate,
     DiningTableResponse,
     DiningTableUpdate,
+    OpenTableResponse,
     OrderPaymentUpdate,
     OrderResponse,
     OrderStatusUpdate,
@@ -31,6 +34,8 @@ from schemas import (
     PublicMenuResponse,
     PublicOrderCreate,
     PublicTableResponse,
+    TablePaymentResponse,
+    TableSessionResponse,
 )
 from services.mqtt_publisher import publish_order_event
 from .rbac_helper import ensure_permission_global
@@ -44,6 +49,39 @@ def _product_image_url(tenant_code: str, product_id: int, has_image: bool) -> Op
     if not has_image:
         return None
     return f"/api/public/{tenant_code}/products/{product_id}/image"
+
+
+def _session_to_response(session: TableSession) -> TableSessionResponse:
+    return TableSessionResponse(
+        id=session.id,
+        table_id=session.table_id,
+        session_token=session.session_token,
+        status=session.status,
+        opened_at=session.created_at,
+        closed_at=session.closed_at,
+    )
+
+
+def _get_active_session_from_table(table: DiningTable) -> Optional[TableSession]:
+    for session in table.sessions or []:
+        if session.status == "active":
+            return session
+    return None
+
+
+def _table_to_response(table: DiningTable) -> DiningTableResponse:
+    active_session = _get_active_session_from_table(table)
+    return DiningTableResponse(
+        id=table.id,
+        table_code=table.table_code,
+        name=table.name,
+        is_active=table.is_active,
+        qr_token=table.qr_token,
+        status="serving" if active_session else "empty",
+        current_session=_session_to_response(active_session) if active_session else None,
+        created_at=table.created_at,
+        updated_at=table.updated_at,
+    )
 
 
 class ProductCategoryService:
@@ -263,6 +301,37 @@ class DiningTableService:
             if not result.scalar_one_or_none():
                 return token
 
+    async def _generate_unique_session_token(self) -> str:
+        while True:
+            token = secrets.token_urlsafe(16)
+            result = await self.db.execute(
+                select(TableSession).where(TableSession.session_token == token)
+            )
+            if not result.scalar_one_or_none():
+                return token
+
+    async def _load_table_with_sessions(self, table_id: int) -> Optional[DiningTable]:
+        result = await self.db.execute(
+            select(DiningTable)
+            .options(selectinload(DiningTable.sessions))
+            .where(DiningTable.id == table_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def _get_active_session_for_table(self, table_id: int) -> Optional[TableSession]:
+        result = await self.db.execute(
+            select(TableSession).where(
+                TableSession.table_id == table_id,
+                TableSession.status == "active",
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def _close_session(self, session: TableSession, closed_by: Optional[int] = None) -> None:
+        session.status = "closed"
+        session.closed_at = datetime.now(timezone.utc)
+        session.closed_by = closed_by
+
     async def _ensure_unique_table_code(self, table_code: str, exclude_id: Optional[int] = None) -> None:
         query = select(DiningTable).where(DiningTable.table_code == table_code)
         result = await self.db.execute(query)
@@ -271,7 +340,7 @@ class DiningTableService:
             raise HTTPException(status_code=400, detail="Table code already exists")
 
     async def get_all(self, page: int = 1, page_size: int = 10, search: Optional[str] = None):
-        query = select(DiningTable)
+        query = select(DiningTable).options(selectinload(DiningTable.sessions))
         if search:
             like = f"%{search}%"
             query = query.filter(
@@ -286,7 +355,7 @@ class DiningTableService:
         )
         rows = result.scalars().all()
         return PaginatedDiningTableResponse(
-            data=[DiningTableResponse.model_validate(row) for row in rows],
+            data=[_table_to_response(row) for row in rows],
             total=total,
             page=page,
             page_size=page_size,
@@ -301,6 +370,68 @@ class DiningTableService:
             select(DiningTable).where(DiningTable.qr_token == qr_token)
         )
         return result.scalar_one_or_none()
+
+    async def get_session_by_token(self, session_token: str) -> Optional[TableSession]:
+        result = await self.db.execute(
+            select(TableSession)
+            .options(selectinload(TableSession.table))
+            .where(TableSession.session_token == session_token)
+        )
+        return result.scalar_one_or_none()
+
+    async def open_table(self, table_id: int, user_id: int) -> OpenTableResponse:
+        table = await self._load_table_with_sessions(table_id)
+        if not table:
+            raise HTTPException(status_code=404, detail="Table not found")
+        if not table.is_active:
+            raise HTTPException(status_code=400, detail="Bàn đang bị khoá")
+        existing = await self._get_active_session_for_table(table_id)
+        if existing:
+            raise HTTPException(status_code=409, detail="Bàn đang được phục vụ")
+
+        session = TableSession(
+            table_id=table.id,
+            session_token=await self._generate_unique_session_token(),
+            status="active",
+            opened_by=user_id,
+        )
+        self.db.add(session)
+        await self.db.commit()
+        await self.db.refresh(session)
+
+        table = await self._load_table_with_sessions(table_id)
+        return OpenTableResponse(
+            table=_table_to_response(table),
+            session=_session_to_response(session),
+        )
+
+    async def close_table(
+        self, table_id: int, user_id: int, payload: CloseTableRequest
+    ) -> DiningTableResponse:
+        table = await self._load_table_with_sessions(table_id)
+        if not table:
+            raise HTTPException(status_code=404, detail="Table not found")
+
+        session = await self._get_active_session_for_table(table_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Bàn không có phiên đang mở")
+
+        order_service = OrderService(self.db)
+        open_orders = await order_service._get_open_orders_by_table(table_id)
+        if open_orders:
+            if not payload.force:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Bàn còn đơn chưa thanh toán",
+                )
+            for open_order in open_orders:
+                open_order.status = "cancelled"
+
+        await self._close_session(session, closed_by=user_id)
+        await self.db.commit()
+
+        table = await self._load_table_with_sessions(table_id)
+        return _table_to_response(table)
 
     async def create(self, payload: DiningTableCreate) -> DiningTable:
         await self._ensure_unique_table_code(payload.table_code)
@@ -337,14 +468,15 @@ class DiningTableService:
 
     async def create_for(self, user_id: int, payload: DiningTableCreate):
         await ensure_permission_global(self.db, user_id, "dining_table", "create")
-        return DiningTableResponse.model_validate(await self.create(payload))
+        return _table_to_response(await self.create(payload))
 
     async def update_for(self, user_id: int, table_id: int, payload: DiningTableUpdate):
         await ensure_permission_global(self.db, user_id, "dining_table", "update")
         row = await self.update(table_id, payload)
         if not row:
             raise HTTPException(status_code=404, detail="Table not found")
-        return DiningTableResponse.model_validate(row)
+        table = await self._load_table_with_sessions(table_id)
+        return _table_to_response(table)
 
     async def delete_for(self, user_id: int, table_id: int):
         await ensure_permission_global(self.db, user_id, "dining_table", "delete")
@@ -352,6 +484,16 @@ class DiningTableService:
         if not deleted:
             raise HTTPException(status_code=404, detail="Table not found")
         return {"message": f"Table {table_id} deleted"}
+
+    async def open_table_for(self, user_id: int, table_id: int) -> OpenTableResponse:
+        await ensure_permission_global(self.db, user_id, "dining_table", "update")
+        return await self.open_table(table_id, user_id)
+
+    async def close_table_for(
+        self, user_id: int, table_id: int, payload: CloseTableRequest
+    ) -> DiningTableResponse:
+        await ensure_permission_global(self.db, user_id, "dining_table", "update")
+        return await self.close_table(table_id, user_id, payload)
 
 
 class OrderService:
@@ -400,7 +542,7 @@ class OrderService:
         )
         return result.scalar_one_or_none()
 
-    async def _get_open_order_by_table(self, table_id: int) -> Optional[Order]:
+    async def _get_open_orders_by_table(self, table_id: int) -> list[Order]:
         result = await self.db.execute(
             select(Order)
             .options(
@@ -414,7 +556,17 @@ class OrderService:
             )
             .order_by(Order.id.desc())
         )
-        return result.scalars().first()
+        return list(result.scalars().all())
+
+    async def _close_table_session_if_idle(self, table_id: int) -> None:
+        open_orders = await self._get_open_orders_by_table(table_id)
+        if open_orders:
+            return
+        table_service = DiningTableService(self.db)
+        active_session = await table_service._get_active_session_for_table(table_id)
+        if active_session:
+            await table_service._close_session(active_session)
+            await self.db.commit()
 
     async def get_all(self, page: int = 1, page_size: int = 10, status_filter: Optional[str] = None):
         query = select(Order).options(selectinload(Order.table), selectinload(Order.items))
@@ -444,6 +596,10 @@ class OrderService:
             row.is_paid = payload.status == "completed"
         await self.db.commit()
         await self.db.refresh(row)
+
+        if payload.status == "completed":
+            await self._close_table_session_if_idle(row.table_id)
+
         row = await self._load_order(order_id)
         self.publish_event("status_changed", row)
         return row
@@ -457,26 +613,86 @@ class OrderService:
             row.status = "completed"
         await self.db.commit()
         await self.db.refresh(row)
+
+        if payload.is_paid:
+            await self._close_table_session_if_idle(row.table_id)
+
         row = await self._load_order(order_id)
         self.publish_event("payment_updated", row)
         return row
 
-    async def get_current_order_by_token(self, qr_token: str) -> PublicCurrentOrderResponse:
-        table_service = DiningTableService(self.db)
-        table = await table_service.get_by_token(qr_token)
-        if not table or not table.is_active:
-            raise HTTPException(status_code=404, detail="Table not found")
-        order = await self._get_open_order_by_table(table.id)
-        if not order:
-            return PublicCurrentOrderResponse(order=None)
-        return PublicCurrentOrderResponse(order=self._to_response(order))
+    async def mark_table_payment(self, table_id: int, payload: OrderPaymentUpdate) -> TablePaymentResponse:
+        if not payload.is_paid:
+            raise HTTPException(status_code=400, detail="Chỉ hỗ trợ xác nhận thanh toán")
 
-    async def get_public_table(self, qr_token: str) -> PublicTableResponse:
+        open_orders = await self._get_open_orders_by_table(table_id)
+        if not open_orders:
+            raise HTTPException(status_code=404, detail="Bàn không có đơn chưa thanh toán")
+
+        total_amount = _decimal_zero()
+        for order in open_orders:
+            order.is_paid = True
+            order.status = "completed"
+            total_amount += Decimal(order.total_amount)
+
+        await self.db.commit()
+        await self._close_table_session_if_idle(table_id)
+
+        paid_orders = [await self._load_order(order.id) for order in open_orders]
+        table = paid_orders[0].table if paid_orders else None
+        for order in paid_orders:
+            self.publish_event("payment_updated", order)
+
+        return TablePaymentResponse(
+            table_id=table_id,
+            table_code=table.table_code if table else None,
+            table_name=table.name if table else None,
+            total_amount=total_amount,
+            orders=[self._to_response(order) for order in paid_orders],
+        )
+
+    async def _get_active_session(self, session_token: str) -> TableSession:
         table_service = DiningTableService(self.db)
-        table = await table_service.get_by_token(qr_token)
+        session = await table_service.get_session_by_token(session_token)
+        if not session or session.status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="Phiên đã kết thúc",
+            )
+        table = session.table
         if not table or not table.is_active:
             raise HTTPException(status_code=404, detail="Table not found")
-        return PublicTableResponse.model_validate(table)
+        return session
+
+    async def get_current_order_by_session(self, session_token: str) -> PublicCurrentOrderResponse:
+        session = await self._get_active_session(session_token)
+        orders = await self._get_open_orders_by_table(session.table_id)
+        order_responses = [self._to_response(order) for order in orders]
+        total_amount = sum((Decimal(order.total_amount) for order in orders), _decimal_zero())
+        return PublicCurrentOrderResponse(
+            orders=order_responses,
+            total_amount=total_amount,
+            order_count=len(order_responses),
+        )
+
+    async def get_public_order_by_session(self, session_token: str, order_id: int) -> OrderResponse:
+        session = await self._get_active_session(session_token)
+        order = await self._load_order(order_id)
+        if not order or order.table_id != session.table_id:
+            raise HTTPException(status_code=404, detail="Order not found")
+        return self._to_response(order)
+
+    async def get_public_table(self, session_token: str) -> PublicTableResponse:
+        session = await self._get_active_session(session_token)
+        table = session.table
+        return PublicTableResponse(
+            id=table.id,
+            table_code=table.table_code,
+            name=table.name,
+            session_token=session.session_token,
+            session_status=session.status,
+            is_active=table.is_active,
+        )
 
     async def get_public_menu(self) -> PublicMenuResponse:
         tenant_code = current_tenant_code.get() or ""
@@ -520,10 +736,8 @@ class OrderService:
         if not payload.items:
             raise HTTPException(status_code=400, detail="Giỏ hàng đang trống")
 
-        table_service = DiningTableService(self.db)
-        table = await table_service.get_by_token(payload.qr_token)
-        if not table or not table.is_active:
-            raise HTTPException(status_code=404, detail="Table not found")
+        session = await self._get_active_session(payload.session_token)
+        table = session.table
 
         product_ids = [item.product_id for item in payload.items]
         products_result = await self.db.execute(
@@ -538,23 +752,16 @@ class OrderService:
         if unavailable_ids:
             raise HTTPException(status_code=400, detail="Có sản phẩm đang tạm hết")
 
-        order = await self._get_open_order_by_table(table.id)
-        is_append = order is not None
-        event_name = "order_appended" if is_append else "order_created"
-        if not order:
-            order = Order(
-                table_id=table.id,
-                status="pending",
-                is_paid=False,
-                total_amount=_decimal_zero(),
-                note=payload.note,
-            )
-            self.db.add(order)
-            await self.db.flush()
-
-        current_batch = 1
-        if is_append and order.items:
-            current_batch = max(item.batch_no for item in order.items) + 1
+        order = Order(
+            table_id=table.id,
+            session_id=session.id,
+            status="pending",
+            is_paid=False,
+            total_amount=_decimal_zero(),
+            note=payload.note,
+        )
+        self.db.add(order)
+        await self.db.flush()
 
         added_total = _decimal_zero()
         for item in payload.items:
@@ -569,18 +776,16 @@ class OrderService:
                 quantity=item.quantity,
                 note=item.note,
                 subtotal=subtotal,
-                batch_no=current_batch,
+                batch_no=1,
             )
             self.db.add(order_item)
 
-        order.total_amount = Decimal(order.total_amount) + added_total
-        if payload.note:
-            order.note = payload.note
+        order.total_amount = added_total
 
         order_id = order.id
         await self.db.commit()
         order = await self._load_order(order_id)
-        self.publish_event(event_name, order)
+        self.publish_event("order_created", order)
         return self._to_response(order)
 
     def publish_event(self, event_name: str, order: Order) -> None:
@@ -614,6 +819,10 @@ class OrderService:
     async def mark_payment_for(self, user_id: int, order_id: int, payload: OrderPaymentUpdate):
         await ensure_permission_global(self.db, user_id, "order", "update")
         return self._to_response(await self.mark_payment(order_id, payload))
+
+    async def mark_table_payment_for(self, user_id: int, table_id: int, payload: OrderPaymentUpdate):
+        await ensure_permission_global(self.db, user_id, "order", "update")
+        return await self.mark_table_payment(table_id, payload)
 
     async def get_order_for(self, user_id: int, order_id: int):
         await ensure_permission_global(self.db, user_id, "order", "view")

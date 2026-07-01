@@ -3,20 +3,26 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies import get_public_db
-from schemas import PublicCurrentOrderResponse, PublicMenuResponse, PublicOrderCreate, PublicTableResponse
+from schemas import (
+    OrderResponse,
+    PublicCurrentOrderResponse,
+    PublicMenuResponse,
+    PublicOrderCreate,
+    PublicTableResponse,
+)
 from services.restaurant_ordering import OrderService, get_product_image
 
 router = APIRouter(prefix="/public/{tenant}", tags=["Public Ordering"])
 
 
-@router.get("/tables/{qr_token}", response_model=PublicTableResponse)
+@router.get("/tables/{session_token}", response_model=PublicTableResponse)
 async def get_public_table(
     tenant: str,
-    qr_token: str,
+    session_token: str,
     db: AsyncSession = Depends(get_public_db),
 ):
     service = OrderService(db)
-    return await service.get_public_table(qr_token)
+    return await service.get_public_table(session_token)
 
 
 @router.get("/menu", response_model=PublicMenuResponse)
@@ -48,11 +54,22 @@ async def submit_public_order(
     return await service.submit_public_order(payload)
 
 
-@router.get("/tables/{qr_token}/current-order", response_model=PublicCurrentOrderResponse)
+@router.get("/tables/{session_token}/current-order", response_model=PublicCurrentOrderResponse)
 async def get_current_public_order(
     tenant: str,
-    qr_token: str,
+    session_token: str,
     db: AsyncSession = Depends(get_public_db),
 ):
     service = OrderService(db)
-    return await service.get_current_order_by_token(qr_token)
+    return await service.get_current_order_by_session(session_token)
+
+
+@router.get("/orders/{order_id}", response_model=OrderResponse)
+async def get_public_order(
+    tenant: str,
+    order_id: int,
+    session_token: str,
+    db: AsyncSession = Depends(get_public_db),
+):
+    service = OrderService(db)
+    return await service.get_public_order_by_session(session_token, order_id)

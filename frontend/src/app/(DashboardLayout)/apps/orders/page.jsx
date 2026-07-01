@@ -91,6 +91,24 @@ export default function OrdersPage() {
   });
 
   const orders = useMemo(() => ordersData?.data || [], [ordersData]);
+  const unpaidByTable = useMemo(() => {
+    const map = new Map();
+    orders.forEach((order) => {
+      if (order.is_paid || order.status === "cancelled") return;
+      const key = order.table_id;
+      const existing = map.get(key) || {
+        table_id: order.table_id,
+        table_name: order.table_name,
+        table_code: order.table_code,
+        orderCount: 0,
+        total: 0,
+      };
+      existing.orderCount += 1;
+      existing.total += Number(order.total_amount || 0);
+      map.set(key, existing);
+    });
+    return Array.from(map.values()).sort((a, b) => a.table_id - b.table_id);
+  }, [orders]);
   const groupedOrders = useMemo(() => {
     const map = Object.fromEntries(statusKeys.map((status) => [status, []]));
     orders.forEach((order) => {
@@ -135,6 +153,17 @@ export default function OrdersPage() {
     };
   }, [mqttServer, tenantCode, mutateOrders, mutateSummary]);
 
+  const markTablePaid = async (tableId) => {
+    try {
+      await postFetcher(`${api.MARK_TABLE_PAID}/${tableId}/mark-paid`, { is_paid: true });
+      toast.success("Đã xác nhận thanh toán cho bàn");
+      mutateOrders();
+      mutateSummary();
+    } catch (error) {
+      toast.error(error.message || "Không thể xác nhận thanh toán");
+    }
+  };
+
   const updateStatus = async (orderId, status) => {
     try {
       await postFetcher(`${api.POST_ORDER_STATUS}/${orderId}/status`, { status });
@@ -143,17 +172,6 @@ export default function OrdersPage() {
       mutateSummary();
     } catch (error) {
       toast.error(error.message || "Không thể cập nhật trạng thái");
-    }
-  };
-
-  const markPaid = async (orderId) => {
-    try {
-      await postFetcher(`${api.POST_ORDER_STATUS}/${orderId}/mark-paid`, { is_paid: true });
-      toast.success("Đã xác nhận thanh toán");
-      mutateOrders();
-      mutateSummary();
-    } catch (error) {
-      toast.error(error.message || "Không thể xác nhận thanh toán");
     }
   };
 
@@ -225,6 +243,53 @@ export default function OrdersPage() {
 
   return (
     <PageContainer title="Quản lý đơn hàng" description="Theo dõi đơn hàng realtime từ khách quét QR">
+      {unpaidByTable.length > 0 && (
+        <Card variant="outlined" sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="h6" fontWeight={700} mb={2}>
+              Thanh toán theo bàn
+            </Typography>
+            <Stack spacing={1.5}>
+              {unpaidByTable.map((table) => (
+                <Stack
+                  key={table.table_id}
+                  direction={{ xs: "column", sm: "row" }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  spacing={1}
+                  sx={{
+                    p: 1.5,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 2,
+                  }}
+                >
+                  <Box>
+                    <Typography fontWeight={700}>
+                      Bàn {table.table_name || table.table_code}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {table.orderCount} đơn chưa thanh toán
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="h6" color="primary.main" fontWeight={700}>
+                      {table.total.toLocaleString("vi-VN")} đ
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => markTablePaid(table.table_id)}
+                    >
+                      Xác nhận thanh toán bàn
+                    </Button>
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
       <Card variant="outlined" sx={{ overflow: "hidden" }}>
         <Box
           sx={{
@@ -277,11 +342,18 @@ export default function OrdersPage() {
               </Box>
             ) : (
               <Grid container spacing={2}>
-                {visibleOrders.map((order) => (
-                  <Grid key={order.id} size={{ xs: 12, lg: 6, xl: 4 }}>
-                    <OrderCard order={order} onUpdateStatus={updateStatus} onMarkPaid={markPaid} />
-                  </Grid>
-                ))}
+                {visibleOrders.map((order) => {
+                  const tableUnpaid = unpaidByTable.find((item) => item.table_id === order.table_id);
+                  return (
+                    <Grid key={order.id} size={{ xs: 12, lg: 6, xl: 4 }}>
+                      <OrderCard
+                        order={order}
+                        tableUnpaid={tableUnpaid}
+                        onUpdateStatus={updateStatus}
+                      />
+                    </Grid>
+                  );
+                })}
               </Grid>
             )}
           </Box>
@@ -291,7 +363,7 @@ export default function OrdersPage() {
   );
 }
 
-function OrderCard({ order, onUpdateStatus, onMarkPaid }) {
+function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
   const itemCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
   const detailsExpandedByDefault = order.status === "confirmed";
   const [showDetails, setShowDetails] = useState(detailsExpandedByDefault);
@@ -322,6 +394,11 @@ function OrderCard({ order, onUpdateStatus, onMarkPaid }) {
           <Typography variant="h6" color="primary.main">
             {Number(order.total_amount || 0).toLocaleString("vi-VN")} đ
           </Typography>
+          {!order.is_paid && tableUnpaid && tableUnpaid.orderCount > 1 ? (
+            <Typography variant="body2" color="text.secondary">
+              Tổng bàn ({tableUnpaid.orderCount} đơn): {tableUnpaid.total.toLocaleString("vi-VN")} đ
+            </Typography>
+          ) : null}
           <Stack
             direction="row"
             alignItems="center"
@@ -372,11 +449,6 @@ function OrderCard({ order, onUpdateStatus, onMarkPaid }) {
             {order.status !== "served" && order.status !== "completed" && order.status !== "cancelled" && (
               <Button size="small" variant="outlined" onClick={() => onUpdateStatus(order.id, "served")}>
                 Đã phục vụ
-              </Button>
-            )}
-            {!order.is_paid && (
-              <Button size="small" variant="contained" onClick={() => onMarkPaid(order.id)}>
-                Xác nhận thanh toán
               </Button>
             )}
             {order.status !== "cancelled" && order.status !== "completed" && (

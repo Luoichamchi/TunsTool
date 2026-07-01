@@ -15,7 +15,7 @@ import {
   Alert,
 } from "@mui/material";
 import { IconMinus, IconPlus } from "@tabler/icons-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
 import { publicGetFetcher, publicPostFetcher } from "@/app/api/globalFetcher";
@@ -28,27 +28,51 @@ function CartQuantityButton({ onClick, children }) {
   );
 }
 
+async function publicGetFetcherWithStatus(url) {
+  try {
+    return await publicGetFetcher(url);
+  } catch (error) {
+    if (error?.status === 410) {
+      const sessionError = new Error(error.message || "Phiên đã kết thúc");
+      sessionError.status = 410;
+      throw sessionError;
+    }
+    throw error;
+  }
+}
+
 export default function PublicOrderPage() {
-  const { tenant, table } = useParams();
+  const { tenant, table: sessionToken } = useParams();
+  const router = useRouter();
   const [cart, setCart] = useState({});
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const tableUrl = `/api/public/${tenant}/tables/${table}`;
+  const tableUrl = `/api/public/${tenant}/tables/${sessionToken}`;
   const menuUrl = `/api/public/${tenant}/menu`;
-  const currentOrderUrl = `/api/public/${tenant}/tables/${table}/current-order`;
+  const sessionOrdersUrl = `/api/public/${tenant}/tables/${sessionToken}/current-order`;
 
-  const { data: tableInfo } = useSWR(tableUrl, publicGetFetcher);
-  const { data: menuData } = useSWR(menuUrl, publicGetFetcher);
-  const { data: currentOrderData, mutate: mutateCurrentOrder } = useSWR(
-    currentOrderUrl,
+  const {
+    data: tableInfo,
+    error: tableError,
+    isLoading: tableLoading,
+  } = useSWR(tableUrl, publicGetFetcherWithStatus, { refreshInterval: 15000 });
+  const { data: menuData } = useSWR(
+    tableInfo ? menuUrl : null,
     publicGetFetcher,
+  );
+  const { data: sessionOrdersData } = useSWR(
+    tableInfo ? sessionOrdersUrl : null,
+    publicGetFetcherWithStatus,
     { refreshInterval: 15000 },
   );
 
+  const sessionEnded = tableError?.status === 410;
+  const sessionUnavailable = sessionEnded || (!tableLoading && !tableInfo && tableError);
+
   const categories = useMemo(() => menuData?.categories || [], [menuData]);
-  const currentOrder = currentOrderData?.order || null;
+  const sessionOrderCount = sessionOrdersData?.order_count || 0;
+  const sessionTotalAmount = Number(sessionOrdersData?.total_amount || 0);
 
   const cartItems = useMemo(() => {
     const productMap = new Map();
@@ -101,10 +125,9 @@ export default function PublicOrderPage() {
       return;
     }
     setSubmitting(true);
-    setSubmitSuccess(false);
     try {
       const payload = {
-        qr_token: table,
+        session_token: sessionToken,
         note,
         items: cartItems.map((item) => ({
           product_id: item.product.id,
@@ -112,12 +135,9 @@ export default function PublicOrderPage() {
           note: item.note || "",
         })),
       };
-      await publicPostFetcher(`/api/public/${tenant}/orders`, payload);
-      setCart({});
-      setNote("");
-      setSubmitSuccess(true);
+      const order = await publicPostFetcher(`/api/public/${tenant}/orders`, payload);
       toast.success("Đã gửi đơn hàng");
-      await mutateCurrentOrder();
+      router.push(`/order/${tenant}/${sessionToken}/success?orderId=${order.id}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Không thể gửi đơn hàng";
@@ -126,6 +146,29 @@ export default function PublicOrderPage() {
       setSubmitting(false);
     }
   };
+
+  if (tableLoading) {
+    return (
+      <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 3 }}>
+        <Typography>Đang tải...</Typography>
+      </Box>
+    );
+  }
+
+  if (sessionUnavailable) {
+    return (
+      <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 3 }}>
+        <Card variant="outlined">
+          <CardContent>
+            <Alert severity="warning">
+              Phiên đã kết thúc hoặc bàn chưa được nhận. Vui lòng gọi nhân viên nhận bàn và quét QR
+              mới.
+            </Alert>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 3 }}>
@@ -138,6 +181,11 @@ export default function PublicOrderPage() {
             <Typography variant="body1" color="text.secondary" mt={1}>
               {tableInfo ? `${tableInfo.name} (${tableInfo.table_code})` : "Đang tải thông tin bàn..."}
             </Typography>
+            {sessionOrderCount > 0 ? (
+              <Typography variant="body1" color="primary.main" fontWeight={600} mt={1}>
+                Đã gọi {sessionOrderCount} đơn · Tổng bàn: {sessionTotalAmount.toLocaleString("vi-VN")} đ
+              </Typography>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -250,9 +298,17 @@ export default function PublicOrderPage() {
               sx={{ mt: 2 }}
             />
             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
-              <Typography variant="h6" color="primary.main">
-                Tổng: {totalAmount.toLocaleString("vi-VN")} đ
-              </Typography>
+              <Box>
+                <Typography variant="h6" color="primary.main">
+                  Giỏ hiện tại: {totalAmount.toLocaleString("vi-VN")} đ
+                </Typography>
+                {sessionOrderCount > 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Tổng bàn (gồm {sessionOrderCount} đơn đã gọi):{" "}
+                    {(sessionTotalAmount + totalAmount).toLocaleString("vi-VN")} đ
+                  </Typography>
+                ) : null}
+              </Box>
               <Button
                 variant="contained"
                 onClick={submitOrder}
@@ -261,42 +317,6 @@ export default function PublicOrderPage() {
                 {submitting ? "Đang gửi..." : "Xác nhận đặt món"}
               </Button>
             </Stack>
-            {submitSuccess && (
-              <Alert severity="success" sx={{ mt: 2 }}>
-                Đã gửi đơn hàng. Bạn có thể tiếp tục gọi thêm món, đơn sẽ được cộng dồn
-                cho đến khi quán xác nhận thanh toán.
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" fontWeight={700}>
-              Đơn hiện tại của bàn
-            </Typography>
-            {currentOrder ? (
-              <Stack spacing={1} mt={2}>
-                <Typography>
-                  Trạng thái: <strong>{currentOrder.status}</strong>
-                </Typography>
-                <Typography>
-                  Thanh toán: <strong>{currentOrder.is_paid ? "Đã thanh toán" : "Chưa thanh toán"}</strong>
-                </Typography>
-                {(currentOrder.items || []).map((item) => (
-                  <Typography key={item.id} variant="body2">
-                    {item.quantity} x {item.product_name} (batch {item.batch_no})
-                  </Typography>
-                ))}
-                <Typography variant="h6" color="primary.main" pt={1}>
-                  Tổng cộng: {Number(currentOrder.total_amount || 0).toLocaleString("vi-VN")} đ
-                </Typography>
-              </Stack>
-            ) : (
-              <Typography color="text.secondary" mt={2}>
-                Bàn này hiện chưa có đơn mở.
-              </Typography>
-            )}
           </CardContent>
         </Card>
       </Stack>

@@ -103,13 +103,35 @@ class DiningTableUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class TableSessionResponse(BaseModel):
+    id: int
+    table_id: int
+    session_token: str
+    status: str
+    opened_at: datetime
+    closed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DiningTableResponse(DiningTableBase):
     id: int
     qr_token: str
+    status: str = "empty"
+    current_session: Optional[TableSessionResponse] = None
     created_at: datetime
     updated_at: Optional[datetime]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CloseTableRequest(BaseModel):
+    force: bool = False
+
+
+class OpenTableResponse(BaseModel):
+    table: DiningTableResponse
+    session: TableSessionResponse
 
 
 class PaginatedDiningTableResponse(BaseModel):
@@ -175,7 +197,7 @@ class PublicOrderItemCreate(BaseModel):
 
 
 class PublicOrderCreate(BaseModel):
-    qr_token: str
+    session_token: str
     note: Optional[str] = None
     items: List[PublicOrderItemCreate]
 
@@ -184,7 +206,8 @@ class PublicTableResponse(BaseModel):
     id: int
     table_code: str
     name: str
-    qr_token: str
+    session_token: str
+    session_status: str
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -202,4 +225,14 @@ class PublicMenuResponse(BaseModel):
 
 
 class PublicCurrentOrderResponse(BaseModel):
-    order: Optional[OrderResponse] = None
+    orders: List[OrderResponse] = []
+    total_amount: Decimal = Decimal("0")
+    order_count: int = 0
+
+
+class TablePaymentResponse(BaseModel):
+    table_id: int
+    table_code: Optional[str] = None
+    table_name: Optional[str] = None
+    total_amount: Decimal
+    orders: List[OrderResponse] = []

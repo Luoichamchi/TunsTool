@@ -36,19 +36,25 @@ const emptyForm = {
   is_active: true,
 };
 
+function buildQrValue(qrBaseUrl, tenantCode, sessionToken) {
+  return `${qrBaseUrl}/order/${tenantCode || "default"}/${sessionToken}`;
+}
+
 export default function DiningTablesPage() {
   const { tenantCode } = useTenant();
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState({ open: false, item: null });
   const [form, setForm] = useState(emptyForm);
-  const [qrDialog, setQrDialog] = useState({ open: false, item: null });
+  const [qrDialog, setQrDialog] = useState({ open: false, item: null, qrValue: "" });
+  const [openingTableId, setOpeningTableId] = useState(null);
+  const [closingTableId, setClosingTableId] = useState(null);
 
   const canCreate = useHasPermission("dining_table", "create");
   const canUpdate = useHasPermission("dining_table", "update");
   const canDelete = useHasPermission("dining_table", "delete");
 
   const url = `${api.GET_TABLE_LIST}?page=1&page_size=100&search=${encodeURIComponent(search)}`;
-  const { data, mutate } = useSWR(url, getFetcher);
+  const { data, mutate } = useSWR(url, getFetcher, { refreshInterval: 5000 });
   const rows = data?.data || [];
 
   const qrBaseUrl = useMemo(() => {
@@ -103,8 +109,76 @@ export default function DiningTablesPage() {
     }
   };
 
+  const openTable = async (item) => {
+    setOpeningTableId(item.id);
+    try {
+      const result = await postFetcher(`${api.OPEN_TABLE}/${item.id}/open`, {});
+      const sessionToken = result?.session?.session_token;
+      if (!sessionToken) {
+        toast.error("Không nhận được mã phiên");
+        return;
+      }
+      const qrValue = buildQrValue(qrBaseUrl, tenantCode, sessionToken);
+      setQrDialog({
+        open: true,
+        item: { ...item, name: result?.table?.name || item.name },
+        qrValue,
+      });
+      toast.success("Đã nhận bàn — hiển thị QR cho khách quét");
+      mutate();
+    } catch (error) {
+      toast.error(error.message || "Không thể nhận bàn");
+    } finally {
+      setOpeningTableId(null);
+    }
+  };
+
+  const handleCloseTable = (item) => {
+    if (
+      !window.confirm(
+        `Xác nhận trả bàn "${item.name}"? Phiên phục vụ sẽ kết thúc và khách không thể đặt món thêm.`,
+      )
+    ) {
+      return;
+    }
+    closeTable(item);
+  };
+
+  const closeTable = async (item, force = false) => {
+    setClosingTableId(item.id);
+    try {
+      await postFetcher(`${api.CLOSE_TABLE}/${item.id}/close`, { force });
+      toast.success("Đã trả bàn");
+      mutate();
+    } catch (error) {
+      if (!force && error.message?.includes("chưa thanh toán")) {
+        if (window.confirm(`${error.message}. Trả bàn và huỷ đơn chưa thanh toán?`)) {
+          await closeTable(item, true);
+          return;
+        }
+      } else {
+        toast.error(error.message || "Không thể trả bàn");
+      }
+    } finally {
+      setClosingTableId(null);
+    }
+  };
+
+  const showQrForServingTable = (item) => {
+    const sessionToken = item.current_session?.session_token;
+    if (!sessionToken) {
+      toast.error("Không tìm thấy phiên đang mở");
+      return;
+    }
+    setQrDialog({
+      open: true,
+      item,
+      qrValue: buildQrValue(qrBaseUrl, tenantCode, sessionToken),
+    });
+  };
+
   return (
-    <PageContainer title="Quản lý bàn ăn" description="Quản lý bàn và sinh QR code cho khách đặt món">
+    <PageContainer title="Quản lý bàn ăn" description="Nhận bàn, hiển thị QR phiên phục vụ cho khách đặt món">
       <Card variant="outlined">
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
@@ -129,7 +203,14 @@ export default function DiningTablesPage() {
           />
           <Grid container spacing={2}>
             {rows.map((item) => {
-              const qrValue = `${qrBaseUrl}/order/${tenantCode || "default"}/${item.qr_token}`;
+              const isServing = item.status === "serving";
+              const statusLabel = !item.is_active
+                ? "Khoá"
+                : isServing
+                  ? "Đang phục vụ"
+                  : "Trống";
+              const statusColor = !item.is_active ? "default" : isServing ? "success" : "info";
+
               return (
                 <Grid key={item.id} size={{ xs: 12, md: 6, lg: 4 }}>
                   <Card variant="outlined">
@@ -143,19 +224,37 @@ export default function DiningTablesPage() {
                             Mã bàn: {item.table_code}
                           </Typography>
                         </Box>
-                        <Chip
-                          label={item.is_active ? "Đang phục vụ" : "Khoá"}
-                          color={item.is_active ? "success" : "default"}
-                          size="small"
-                        />
+                        <Chip label={statusLabel} color={statusColor} size="small" />
                       </Stack>
                       <Stack spacing={1} mt={2}>
-                        <Button
-                          variant="outlined"
-                          onClick={() => setQrDialog({ open: true, item: { ...item, qrValue } })}
-                        >
-                          Xem QR
-                        </Button>
+                        {!item.is_active ? null : isServing ? (
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              variant="outlined"
+                              color="warning"
+                              onClick={() => handleCloseTable(item)}
+                              disabled={!canUpdate || closingTableId === item.id}
+                              sx={{ flex: 1 }}
+                            >
+                              {closingTableId === item.id ? "Đang trả..." : "Trả bàn"}
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              onClick={() => showQrForServingTable(item)}
+                              sx={{ flex: 1 }}
+                            >
+                              Xem QR
+                            </Button>
+                          </Stack>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            onClick={() => openTable(item)}
+                            disabled={!canUpdate || openingTableId === item.id}
+                          >
+                            {openingTableId === item.id ? "Đang nhận..." : "Nhận bàn"}
+                          </Button>
+                        )}
                         <Stack direction="row" spacing={1}>
                           <Button
                             size="small"
@@ -170,7 +269,7 @@ export default function DiningTablesPage() {
                             color="error"
                             startIcon={<IconTrash size={16} />}
                             onClick={() => removeTable(item.id)}
-                            disabled={!canDelete}
+                            disabled={!canDelete || isServing}
                           >
                             Xoá
                           </Button>
@@ -222,22 +321,25 @@ export default function DiningTablesPage() {
 
       <Dialog
         open={qrDialog.open}
-        onClose={() => setQrDialog({ open: false, item: null })}
+        onClose={() => setQrDialog({ open: false, item: null, qrValue: "" })}
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>QR bàn ăn</DialogTitle>
+        <DialogTitle>QR phiên phục vụ</DialogTitle>
         <DialogContent>
           {qrDialog.item && (
             <Stack spacing={2} alignItems="center" mt={1}>
               <Typography fontWeight={700}>{qrDialog.item.name}</Typography>
-              <QRCode value={qrDialog.item.qrValue} size={220} />
-              <TextField fullWidth value={qrDialog.item.qrValue} InputProps={{ readOnly: true }} />
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Khách quét mã này để đặt món. QR chỉ có hiệu lực trong phiên hiện tại.
+              </Typography>
+              <QRCode value={qrDialog.qrValue} size={220} />
+              <TextField fullWidth value={qrDialog.qrValue} InputProps={{ readOnly: true }} />
             </Stack>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setQrDialog({ open: false, item: null })}>Đóng</Button>
+          <Button onClick={() => setQrDialog({ open: false, item: null, qrValue: "" })}>Đóng</Button>
         </DialogActions>
       </Dialog>
     </PageContainer>
