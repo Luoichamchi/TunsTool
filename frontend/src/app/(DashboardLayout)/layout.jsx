@@ -18,10 +18,7 @@ import useIsMobile from "@/app/utils/hooks/useIsMobile";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { IconMenu2 } from "@tabler/icons-react";
 import { getPageBackground } from "./layout/pageBackground";
-import {
-  LAYOUT_PADDING_LEFT,
-  LAYOUT_PADDING_RIGHT,
-} from "./layout/pageSpacing";
+import { getLayoutHorizontalPadding } from "./layout/pageSpacing";
 
 const MainWrapper = styled("div")(() => ({
   display: "flex",
@@ -60,6 +57,8 @@ export default function RootLayout({ children }) {
   const lgDown = useMediaQuery((theme) => theme.breakpoints.down("lg"));
   const showTabletSidebarToggle =
     activeLayout !== "horizontal" && lgDown && !isMobile;
+  const { left: layoutPaddingLeft, right: layoutPaddingRight } =
+    getLayoutHorizontalPadding(isMobile);
 
   return (
     <MainWrapper
@@ -119,8 +118,8 @@ export default function RootLayout({ children }) {
           sx={{
             pt: "15px",
             px: 0,
-            paddingLeft: `${LAYOUT_PADDING_LEFT}px !important`,
-            paddingRight: `${LAYOUT_PADDING_RIGHT}px !important`,
+            paddingLeft: `${layoutPaddingLeft}px !important`,
+            paddingRight: `${layoutPaddingRight}px !important`,
             width: "100%",
             minWidth: 0,
             maxWidth: isLayout === "boxed" ? "lg" : "100%!important",

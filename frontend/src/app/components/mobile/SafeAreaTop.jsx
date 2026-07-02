@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
 import { useTheme } from "@mui/material/styles";
+import { getPageBackground } from "@/app/(DashboardLayout)/layout/pageBackground";
 
 /**
  * Component xử lý safe area cho Dynamic Island / notch / camera.
@@ -21,10 +22,7 @@ export default function SafeAreaTop() {
     const html = document.documentElement;
 
     if (isMobile) {
-      const bgColor =
-        theme.palette.mode === "dark"
-          ? theme.palette.background.default
-          : "#F3F8FB";
+      const bgColor = getPageBackground(theme);
 
       html.classList.add("mobile-app");
       html.style.setProperty("--safe-area-bg", bgColor);
@@ -37,7 +35,7 @@ export default function SafeAreaTop() {
       html.classList.remove("mobile-app");
       html.style.removeProperty("--safe-area-bg");
     };
-  }, [isMobile, theme.palette.mode, theme.palette.background.default]);
+  }, [isMobile, theme]);
 
   return null; // Không render gì — toàn bộ xử lý qua CSS
 }

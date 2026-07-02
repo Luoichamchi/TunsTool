@@ -17,6 +17,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import { QRCode } from "antd";
 import { toast } from "react-toastify";
 
@@ -25,13 +27,48 @@ import api from "@/app/api/api";
 import { getFetcher, postFetcher } from "@/app/api/globalFetcher";
 import { useHasPermission } from "@/app/utils/auth/useHasPermission";
 import { useTenant } from "@/app/context/TenantContext";
+import useIsMobile from "@/app/utils/hooks/useIsMobile";
+
+function getTableCardSx(theme, isServing) {
+  const isDark = theme.palette.mode === "dark";
+  const defaultBorder = isDark
+    ? "rgba(255, 255, 255, 0.22)"
+    : "rgba(15, 23, 42, 0.2)";
+
+  if (isServing) {
+    return {
+      borderWidth: 2,
+      borderColor: "success.main",
+    };
+  }
+
+  return {
+    borderWidth: 1.5,
+    borderColor: defaultBorder,
+  };
+}
 
 function buildQrValue(qrBaseUrl, tenantCode, sessionToken) {
   return `${qrBaseUrl}/order/${tenantCode || "default"}/${sessionToken}`;
 }
 
+function useTableGridSize() {
+  const isMobile = useIsMobile();
+  const isWideScreen = useMediaQuery("(min-width: 900px)");
+
+  return useMemo(() => {
+    if (isMobile) {
+      // PWA/Capacitor: MUI md breakpoint có thể không khớp viewport → ép 3 cột khi đủ rộng
+      return isWideScreen ? { xs: 4 } : { xs: 12 };
+    }
+    return { xs: 12, md: 4 };
+  }, [isMobile, isWideScreen]);
+}
+
 export default function DiningTablesPage() {
+  const theme = useTheme();
   const { tenantCode } = useTenant();
+  const tableGridSize = useTableGridSize();
   const [qrDialog, setQrDialog] = useState({ open: false, item: null, qrValue: "" });
   const [openingTableId, setOpeningTableId] = useState(null);
   const [closingTableId, setClosingTableId] = useState(null);
@@ -132,17 +169,10 @@ export default function DiningTablesPage() {
               const statusColor = !item.is_active ? "default" : isServing ? "success" : "info";
 
               return (
-                <Grid key={item.id} size={{ xs: 12, md: 6, lg: 4 }}>
+                <Grid key={item.id} size={tableGridSize}>
                   <Card
                     variant="outlined"
-                    sx={
-                      isServing
-                        ? {
-                            borderWidth: 2,
-                            borderColor: "success.main",
-                          }
-                        : undefined
-                    }
+                    sx={getTableCardSx(theme, isServing)}
                   >
                     <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
                       <Stack direction="row" justifyContent="space-between" alignItems="start">

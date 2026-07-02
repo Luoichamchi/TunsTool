@@ -6,13 +6,15 @@ import { useTheme } from "@mui/material/styles";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
 import Logo from "../../shared/logo/Logo";
 import { getPageBackground } from "../../pageBackground";
-import { LAYOUT_PADDING_LEFT, LAYOUT_PADDING_RIGHT } from "../../pageSpacing";
+import { getLayoutHorizontalPadding } from "../../pageSpacing";
 
 const HEADER_LOGO_SIZE = 96;
 
 export default function Header() {
   const theme = useTheme();
   const isMobile = useIsMobile();
+  const { left: layoutPaddingLeft, right: layoutPaddingRight } =
+    getLayoutHorizontalPadding(isMobile);
   const toolbarMinHeight = HEADER_LOGO_SIZE + (isMobile ? 8 : 16);
 
   return (
@@ -32,8 +34,8 @@ export default function Header() {
         disableGutters
         sx={{
           minHeight: toolbarMinHeight,
-          pl: `${LAYOUT_PADDING_LEFT}px`,
-          pr: `${LAYOUT_PADDING_RIGHT}px`,
+          pl: `${layoutPaddingLeft}px`,
+          pr: `${layoutPaddingRight}px`,
           py: 1,
           width: "100%",
           display: "flex",

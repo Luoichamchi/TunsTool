@@ -16,7 +16,7 @@ html.mobile-app body::before {
   left: 0;
   right: 0;
   height: env(safe-area-inset-top, 0px);
-  background-color: var(--safe-area-bg, #F3F8FB);
+  background-color: var(--safe-area-bg, #E8EDF2);
   z-index: 99999;
   pointer-events: none;
 }

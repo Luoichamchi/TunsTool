@@ -1,8 +1,10 @@
 "use client";
-import React, { useState, useCallback, useContext } from "react";
+import React, { useState, useCallback, useContext, useMemo } from "react";
 import { CustomizerContext } from "@/app/context/ClientCustomizerContext/customizerContext";
+import { UserDataContext } from "@/app/context/UserDataContext";
 import { useRouter, usePathname } from "next/navigation";
 import NProgress from "nprogress";
+import { useTranslation } from "react-i18next";
 import {
   BottomNavigation,
   BottomNavigationAction,
@@ -20,7 +22,6 @@ import {
 } from "@mui/material";
 import {
   IconArmchair2,
-  IconSettings,
   IconMenu2,
   IconUsers,
   IconHistory,
@@ -29,60 +30,110 @@ import {
   IconApps,
   IconUser,
   IconX,
+  IconNotebook,
+  IconPackage,
 } from "@tabler/icons-react";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
 import { useIsDefaultTenant } from "@/app/utils/auth/useIsDefaultTenant";
+import { hasPermission } from "@/app/utils/auth/hasPermission";
+import { getPageBackground } from "../pageBackground";
 
 const NAV_ITEMS = [
   {
-    label: "Sơ đồ bàn",
-    icon: <IconArmchair2 size={22} />,
+    titleKey: "DiningTables",
+    icon: IconArmchair2,
     href: "/apps/dining-tables",
+    permission: "dining_table.view",
+  },
+  {
+    titleKey: "OrderManagement",
+    icon: IconNotebook,
+    href: "/apps/orders",
+    permission: "order.view",
   },
 ];
 
 const DRAWER_MENU_ITEMS = [
   {
-    label: "Users",
-    icon: <IconUsers size={20} />,
+    titleKey: "ProductManagement",
+    icon: IconPackage,
+    href: "/apps/products",
+    permission: "product.view",
+  },
+  {
+    titleKey: "TableManagement",
+    icon: IconPackage,
+    href: "/apps/tables",
+    permission: "dining_table.view",
+  },
+  {
+    titleKey: "UserManagement",
+    icon: IconUsers,
     href: "/systems/user-management",
+    permission: "user.view",
   },
   {
-    label: "Roles",
-    icon: <IconUserCheck size={20} />,
+    titleKey: "RoleManagement",
+    icon: IconUserCheck,
     href: "/systems/role-management",
+    permission: "role.view",
   },
   {
-    label: "Audit log",
-    icon: <IconHistory size={20} />,
+    titleKey: "AuditLog",
+    icon: IconHistory,
     href: "/systems/audit-log",
+    permission: "audit_log.view",
   },
   {
-    label: "Tenants",
-    icon: <IconShieldCog size={20} />,
+    titleKey: "TenantManagement",
+    icon: IconShieldCog,
     href: "/systems/tenant-management",
+    permission: "tenant.view",
     defaultTenantOnly: true,
   },
   {
-    label: "Profile",
-    icon: <IconUser size={20} />,
+    titleKey: "Profile",
+    icon: IconUser,
     href: "/apps/user-profile/profile",
   },
   {
-    label: "Theme settings",
-    icon: <IconApps size={20} />,
+    titleKey: "Theme Option",
+    icon: IconApps,
     isCustomizer: true,
   },
 ];
 
 export default function MobileBottomNav() {
   const theme = useTheme();
+  const pageBg = getPageBackground(theme);
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { setCustomizerOpen } = useContext(CustomizerContext);
+  const { user } = useContext(UserDataContext);
   const isDefaultTenant = useIsDefaultTenant();
+
+  const checkItemPermission = useCallback(
+    (item) => {
+      if (item.defaultTenantOnly && !isDefaultTenant) return false;
+      if (!item.permission) return true;
+      const [module, action] = item.permission.split(".");
+      return hasPermission(user?.permissions, module, action);
+    },
+    [isDefaultTenant, user?.permissions],
+  );
+
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter(checkItemPermission),
+    [checkItemPermission],
+  );
+
+  const visibleDrawerItems = useMemo(
+    () => DRAWER_MENU_ITEMS.filter(checkItemPermission),
+    [checkItemPermission],
+  );
 
   const handleOpenCustomizer = useCallback(() => {
     setDrawerOpen(false);
@@ -91,32 +142,31 @@ export default function MobileBottomNav() {
 
   if (!isMobile) return null;
 
-  const activeIndex = NAV_ITEMS.findIndex((item) =>
+  const activeIndex = visibleNavItems.findIndex((item) =>
     pathname?.startsWith(item.href),
   );
 
   const handleNavChange = (event, newValue) => {
-    if (newValue === NAV_ITEMS.length) {
+    if (newValue === visibleNavItems.length) {
       setDrawerOpen(true);
     } else {
       NProgress.start();
-      router.push(NAV_ITEMS[newValue].href);
+      router.push(visibleNavItems[newValue].href);
     }
   };
 
   return (
     <>
       <Paper
-        elevation={8}
+        elevation={0}
         sx={{
           position: "fixed",
           bottom: 0,
           left: 0,
           right: 0,
           zIndex: 1300,
-          borderTop: `1px solid ${theme.palette.divider}`,
           paddingBottom: "env(safe-area-inset-bottom)",
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: pageBg,
         }}
       >
         <BottomNavigation
@@ -124,6 +174,7 @@ export default function MobileBottomNav() {
           onChange={handleNavChange}
           sx={{
             height: 60,
+            backgroundColor: pageBg,
             "& .MuiBottomNavigationAction-root": {
               minWidth: 0,
               padding: "6px 4px 8px",
@@ -144,14 +195,17 @@ export default function MobileBottomNav() {
             },
           }}
         >
-          {NAV_ITEMS.map((item, index) => (
-            <BottomNavigationAction
-              key={index}
-              label={item.label}
-              icon={item.icon}
-              showLabel
-            />
-          ))}
+          {visibleNavItems.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <BottomNavigationAction
+                key={index}
+                label={t(item.titleKey)}
+                icon={<Icon size={22} />}
+                showLabel
+              />
+            );
+          })}
           <BottomNavigationAction
             label="Menu"
             icon={<IconMenu2 size={22} />}
@@ -178,6 +232,7 @@ export default function MobileBottomNav() {
             borderTopRightRadius: 16,
             maxHeight: "70vh",
             pb: 2,
+            backgroundColor: pageBg,
           },
         }}
       >
@@ -209,13 +264,12 @@ export default function MobileBottomNav() {
         </Box>
 
         <List sx={{ pt: 1 }}>
-          {DRAWER_MENU_ITEMS.filter(
-            (item) => !item.defaultTenantOnly || isDefaultTenant,
-          ).map((item, index) => {
+          {visibleDrawerItems.map((item, index) => {
+            const Icon = item.icon;
             const isActive =
               !item.isCustomizer && pathname?.startsWith(item.href);
             return (
-              <React.Fragment key={index}>
+              <React.Fragment key={item.titleKey}>
                 <ListItem disablePadding>
                   <ListItemButton
                     onClick={() => {
@@ -251,10 +305,10 @@ export default function MobileBottomNav() {
                           : theme.palette.text.secondary,
                       }}
                     >
-                      {item.icon}
+                      <Icon size={20} />
                     </ListItemIcon>
                     <ListItemText
-                      primary={item.label}
+                      primary={t(item.titleKey)}
                       primaryTypographyProps={{
                         fontWeight: isActive ? 700 : 500,
                         fontSize: "14px",
@@ -262,7 +316,7 @@ export default function MobileBottomNav() {
                     />
                   </ListItemButton>
                 </ListItem>
-                {index < DRAWER_MENU_ITEMS.length - 1 && (
+                {index < visibleDrawerItems.length - 1 && (
                   <Divider sx={{ mx: 3, opacity: 0.4 }} />
                 )}
               </React.Fragment>
