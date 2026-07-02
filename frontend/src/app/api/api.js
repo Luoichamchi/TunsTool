@@ -21,6 +21,11 @@ const api = {
   GET_ORDER_LIST: "/api/orders",
   POST_ORDER_STATUS: "/api/orders",
   MARK_TABLE_PAID: "/api/orders/tables",
+  GET_REVENUE_SUMMARY: "/api/revenue/summary",
+  GET_REVENUE_EXPENSES: "/api/revenue/expenses",
+  POST_REVENUE_EXPENSE: "/api/revenue/expenses",
+  PUT_REVENUE_EXPENSE: "/api/revenue/expenses",
+  DELETE_REVENUE_EXPENSE: "/api/revenue/expenses/",
   GET_PUBLIC_MENU: "/api/public",
 };
 

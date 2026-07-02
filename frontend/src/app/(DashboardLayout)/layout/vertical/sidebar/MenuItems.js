@@ -6,6 +6,7 @@ import {
   IconFileCheck,
   IconSettings,
   IconNotebook,
+  IconReportMoney,
 } from "@tabler/icons-react";
 
 const Menuitems = [
@@ -23,6 +24,14 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
+    title: "OrderManagement",
+    icon: IconNotebook,
+    chipColor: "secondary",
+    href: "/apps/orders",
+    permission: "order.view",
+  },
+  {
+    id: uniqueId(),
     title: "ProductManagement",
     icon: IconPackage,
     chipColor: "secondary",
@@ -31,19 +40,19 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
+    title: "RevenueReport",
+    icon: IconReportMoney,
+    chipColor: "secondary",
+    href: "/apps/revenue",
+    permission: "revenue.view",
+  },
+  {
+    id: uniqueId(),
     title: "TableManagement",
     icon: IconPackage,
     chipColor: "secondary",
     href: "/apps/tables",
     permission: "dining_table.view",
-  },
-  {
-    id: uniqueId(),
-    title: "OrderManagement",
-    icon: IconNotebook,
-    chipColor: "secondary",
-    href: "/apps/orders",
-    permission: "order.view",
   },
   {
     navlabel: true,

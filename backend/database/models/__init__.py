@@ -5,3 +5,4 @@ from .demo import *
 from .user import *
 from .audit_log import *
 from .restaurant_ordering import *
+from .expense import *

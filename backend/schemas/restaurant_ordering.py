@@ -148,7 +148,6 @@ class OrderItemBase(BaseModel):
     quantity: int
     note: Optional[str] = None
     subtotal: Decimal
-    batch_no: int
 
 
 class OrderItemResponse(OrderItemBase):

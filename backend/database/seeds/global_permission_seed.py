@@ -14,6 +14,7 @@ GLOBAL_MODULES = [
     ("product", "Product management"),
     ("dining_table", "Dining table management"),
     ("order", "Order management"),
+    ("revenue", "Revenue management"),
 ]
 
 GLOBAL_PERMISSIONS = [
@@ -61,6 +62,10 @@ GLOBAL_PERMISSIONS = [
     ("order.create", "Create orders"),
     ("order.update", "Update orders"),
     ("order.delete", "Delete orders"),
+    ("revenue.view", "View revenue"),
+    ("revenue.create", "Create revenue"),
+    ("revenue.update", "Update revenue"),
+    ("revenue.delete", "Delete revenue"),
 ]
 
 

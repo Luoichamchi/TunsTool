@@ -513,7 +513,6 @@ class OrderService:
             "quantity": item.quantity,
             "note": item.note,
             "subtotal": item.subtotal,
-            "batch_no": item.batch_no,
             "created_at": item.created_at,
             "updated_at": item.updated_at,
         }
@@ -531,7 +530,7 @@ class OrderService:
             created_at=row.created_at,
             updated_at=row.updated_at,
             served_at=row.served_at,
-            items=[self._serialize_item(item) for item in sorted(row.items, key=lambda x: (x.batch_no, x.id))],
+            items=[self._serialize_item(item) for item in sorted(row.items, key=lambda x: x.id)],
         )
 
     async def _load_order(self, order_id: int) -> Optional[Order]:
@@ -781,7 +780,6 @@ class OrderService:
                 quantity=item.quantity,
                 note=item.note,
                 subtotal=subtotal,
-                batch_no=1,
             )
             self.db.add(order_item)
 

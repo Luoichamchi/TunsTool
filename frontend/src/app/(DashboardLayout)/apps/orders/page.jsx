@@ -36,6 +36,30 @@ const STATUS_MENU = [
 
 const statusKeys = STATUS_MENU.map((item) => item.key);
 
+function formatOrderDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function isSameLocalDay(value, baseDate = new Date()) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return (
+    date.getFullYear() === baseDate.getFullYear() &&
+    date.getMonth() === baseDate.getMonth() &&
+    date.getDate() === baseDate.getDate()
+  );
+}
+
 function normalizeMqttUrl(value) {
   if (!value || typeof value !== "string") return null;
   if (!/^(mqtt|ws|wss):\/\//.test(value)) {
@@ -112,9 +136,15 @@ export default function OrdersPage() {
   }, [orders]);
   const groupedOrders = useMemo(() => {
     const map = Object.fromEntries(statusKeys.map((status) => [status, []]));
+    const today = new Date();
     orders.forEach((order) => {
       const key = order.status || "pending";
       if (!map[key]) map[key] = [];
+      const isTerminal = key === "completed" || key === "cancelled";
+      const terminalDisplayTime = order.updated_at || order.created_at;
+      if (isTerminal && !isSameLocalDay(terminalDisplayTime, today)) {
+        return;
+      }
       map[key].push(order);
     });
     return map;
@@ -224,7 +254,10 @@ export default function OrdersPage() {
       }}
     >
       {STATUS_MENU.map((item) => {
-        const count = summaryData?.[item.key] ?? groupedOrders[item.key]?.length ?? 0;
+        const count =
+          item.key === "completed" || item.key === "cancelled"
+            ? groupedOrders[item.key]?.length ?? 0
+            : summaryData?.[item.key] ?? groupedOrders[item.key]?.length ?? 0;
         const selected = selectedStatus === item.key;
         return (
           <Tab
@@ -619,13 +652,13 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
                       Đơn #{order.id}
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {formatOrderDateTime(order.created_at)}
+                    </Typography>
                     <Stack spacing={0.25} mt={0.25}>
                       {(order.items || []).map((item) => (
                         <Typography key={item.id} variant="body2">
-                          {item.quantity} x {item.product_name}{" "}
-                          <Typography component="span" variant="caption" color="text.secondary">
-                            (batch {item.batch_no})
-                          </Typography>
+                          {item.quantity} x {item.product_name}
                         </Typography>
                       ))}
                     </Stack>
@@ -686,6 +719,9 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
             <Typography variant="body2" color="text.secondary">
               Đơn #{order.id}
             </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              {formatOrderDateTime(order.created_at)}
+            </Typography>
           </Box>
 
           <Box sx={{ gridArea: { xs: "price", sm: "auto" } }}>
@@ -721,10 +757,7 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
               <Stack spacing={0.5} mt={0.5}>
                 {(order.items || []).map((item) => (
                   <Typography key={item.id} variant="body2">
-                    {item.quantity} x {item.product_name}{" "}
-                    <Typography component="span" variant="caption" color="text.secondary">
-                      (batch {item.batch_no})
-                    </Typography>
+                    {item.quantity} x {item.product_name}
                   </Typography>
                 ))}
               </Stack>

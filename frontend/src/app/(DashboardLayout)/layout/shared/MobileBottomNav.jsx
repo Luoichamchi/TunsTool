@@ -32,6 +32,7 @@ import {
   IconX,
   IconNotebook,
   IconPackage,
+  IconReportMoney,
 } from "@tabler/icons-react";
 import useIsMobile from "@/app/utils/hooks/useIsMobile";
 import { useIsDefaultTenant } from "@/app/utils/auth/useIsDefaultTenant";
@@ -59,6 +60,12 @@ const DRAWER_MENU_ITEMS = [
     icon: IconPackage,
     href: "/apps/products",
     permission: "product.view",
+  },
+  {
+    titleKey: "RevenueReport",
+    icon: IconReportMoney,
+    href: "/apps/revenue",
+    permission: "revenue.view",
   },
   {
     titleKey: "TableManagement",

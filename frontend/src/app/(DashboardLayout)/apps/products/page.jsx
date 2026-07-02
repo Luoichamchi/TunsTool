@@ -26,6 +26,8 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  Tabs,
+  Tab,
   TextField,
   Typography,
 } from "@mui/material";
@@ -73,6 +75,18 @@ const tableSx = {
   },
 };
 
+const productCardSx = {
+  border: (theme) => `1px solid ${theme.palette.divider}`,
+  borderRadius: 2,
+  p: 1.5,
+  height: "100%",
+  display: "flex",
+  alignItems: "stretch",
+  gap: 1.5,
+};
+
+const MAX_PRODUCT_PAGE_SIZE = 100;
+
 function toProductFormData(form) {
   const payload = new FormData();
   if (form.category_id !== "") payload.append("category_id", form.category_id);
@@ -85,17 +99,31 @@ function toProductFormData(form) {
   return payload;
 }
 
+function toProductUpdateFormData(item, overrides = {}) {
+  const payload = new FormData();
+  const nextCategoryId = overrides.category_id ?? item.category_id;
+  if (nextCategoryId !== "" && nextCategoryId !== null && nextCategoryId !== undefined) {
+    payload.append("category_id", String(nextCategoryId));
+  }
+  payload.append("name", overrides.name ?? item.name ?? "");
+  payload.append("description", overrides.description ?? item.description ?? "");
+  payload.append("price", String(overrides.price ?? item.price ?? 0));
+  payload.append("is_available", String(overrides.is_available ?? item.is_available ?? true));
+  payload.append("sort_order", String(overrides.sort_order ?? item.sort_order ?? 0));
+  return payload;
+}
+
 export default function ProductsPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [categoryPage, setCategoryPage] = useState(0);
   const [categoryPageSize, setCategoryPageSize] = useState(10);
-  const [productPage, setProductPage] = useState(0);
-  const [productPageSize, setProductPageSize] = useState(10);
+  const [selectedProductCategory, setSelectedProductCategory] = useState("all");
   const [categoryDialog, setCategoryDialog] = useState({ open: false, item: null });
   const [productDialog, setProductDialog] = useState({ open: false, item: null });
   const [categoryForm, setCategoryForm] = useState(emptyCategory);
   const [productForm, setProductForm] = useState(emptyProduct);
+  const [togglingProductId, setTogglingProductId] = useState(null);
 
   const canCreateCategory = useHasPermission("product_category", "create");
   const canUpdateCategory = useHasPermission("product_category", "update");
@@ -105,7 +133,7 @@ export default function ProductsPage() {
   const canDeleteProduct = useHasPermission("product", "delete");
 
   const categoriesUrl = `${api.GET_PRODUCT_CATEGORY_LIST}?page=${categoryPage + 1}&page_size=${categoryPageSize}&search=${encodeURIComponent(categorySearch)}`;
-  const productsUrl = `${api.GET_PRODUCT_LIST}?page=${productPage + 1}&page_size=${productPageSize}&search=${encodeURIComponent(productSearch)}`;
+  const productsUrl = `${api.GET_PRODUCT_LIST}?page=1&page_size=${MAX_PRODUCT_PAGE_SIZE}&search=${encodeURIComponent(productSearch)}`;
   const { data: categoriesData, mutate: mutateCategories, isLoading: categoriesLoading } =
     useSWR(categoriesUrl, getFetcher);
   const { data: productsData, mutate: mutateProducts, isLoading: productsLoading } =
@@ -120,6 +148,42 @@ export default function ProductsPage() {
     () => categories.filter((item) => item.is_active),
     [categories],
   );
+
+  const productTabs = useMemo(() => {
+    const tabs = [{ value: "all", label: "Tất cả" }];
+
+    categoryOptions.forEach((item) => {
+      tabs.push({
+        value: String(item.id),
+        label: item.name,
+      });
+    });
+
+    const hasUncategorized = products.some(
+      (item) => item.category_id === null || item.category_id === undefined || item.category_id === "",
+    );
+
+    if (hasUncategorized) {
+      tabs.push({
+        value: "uncategorized",
+        label: "Chưa phân loại",
+      });
+    }
+
+    return tabs;
+  }, [categoryOptions, products]);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedProductCategory === "all") return products;
+    if (selectedProductCategory === "uncategorized") {
+      return products.filter(
+        (item) => item.category_id === null || item.category_id === undefined || item.category_id === "",
+      );
+    }
+    return products.filter((item) => String(item.category_id) === selectedProductCategory);
+  }, [products, selectedProductCategory]);
+
+  const visibleProductCount = filteredProducts.length;
 
   const openCategoryDialog = (item = null) => {
     setCategoryDialog({ open: true, item });
@@ -217,6 +281,24 @@ export default function ProductsPage() {
       mutateProducts();
     } catch (error) {
       toast.error(error.message || "Không thể xoá mặt hàng");
+    }
+  };
+
+  const toggleProductAvailability = async (item) => {
+    setTogglingProductId(item.id);
+    try {
+      const payload = toProductUpdateFormData(item, {
+        is_available: !item.is_available,
+      });
+      await putFetcher(`${api.PUT_PRODUCT}/${item.id}`, payload);
+      toast.success(
+        !item.is_available ? "Đã bật trạng thái có thể đặt món" : "Đã tắt trạng thái có thể đặt món",
+      );
+      await mutateProducts();
+    } catch (error) {
+      toast.error(error.message || "Không thể cập nhật trạng thái mặt hàng");
+    } finally {
+      setTogglingProductId(null);
     }
   };
 
@@ -336,9 +418,14 @@ export default function ProductsPage() {
         <Card variant="outlined">
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h5" fontWeight={700}>
-                Mặt hàng
-              </Typography>
+              <Box>
+                <Typography variant="h5" fontWeight={700}>
+                  Mặt hàng
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {visibleProductCount}/{productTotal} món
+                </Typography>
+              </Box>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -353,89 +440,133 @@ export default function ProductsPage() {
                 fullWidth
                 placeholder="Tìm mặt hàng..."
                 value={productSearch}
-                onChange={(e) => {
-                  setProductSearch(e.target.value);
-                  setProductPage(0);
-                }}
+                onChange={(e) => setProductSearch(e.target.value)}
               />
             </Box>
-            <TableContainer>
-              <Table sx={tableSx}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Ảnh</TableCell>
-                    <TableCell>Tên món</TableCell>
-                    <TableCell>Loại</TableCell>
-                    <TableCell>Giá</TableCell>
-                    <TableCell>Trạng thái</TableCell>
-                    <TableCell>Thao tác</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {productsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <CircularProgress size={28} />
-                      </TableCell>
-                    </TableRow>
-                  ) : products.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        Không có dữ liệu
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    products.map((item) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>
-                          <Box
+            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+              <Tabs
+                value={productTabs.some((tab) => tab.value === selectedProductCategory) ? selectedProductCategory : "all"}
+                onChange={(_, newValue) => setSelectedProductCategory(newValue)}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+              >
+                {productTabs.map((tab) => (
+                  <Tab key={tab.value} value={tab.value} label={tab.label} />
+                ))}
+              </Tabs>
+            </Box>
+            {productsLoading ? (
+              <Box py={6} display="flex" justifyContent="center">
+                <CircularProgress size={28} />
+              </Box>
+            ) : filteredProducts.length === 0 ? (
+              <Box py={6}>
+                <Typography align="center" color="text.secondary">
+                  Không có dữ liệu
+                </Typography>
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, minmax(0, 1fr))",
+                    lg: "repeat(3, minmax(0, 1fr))",
+                    xl: "repeat(4, minmax(0, 1fr))",
+                  },
+                  gap: 1.5,
+                }}
+              >
+                {filteredProducts.map((item) => (
+                  <Box key={item.id} sx={productCardSx}>
+                    <Stack
+                      direction="row"
+                      spacing={1.5}
+                      alignItems="stretch"
+                      sx={{ width: "100%" }}
+                    >
+                      <Box
+                        sx={{
+                          width: 88,
+                          minWidth: 88,
+                          height: 88,
+                          borderRadius: 1.5,
+                          overflow: "hidden",
+                          bgcolor: "action.hover",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {item.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            Không ảnh
+                          </Typography>
+                        )}
+                      </Box>
+
+                      <Stack
+                        spacing={1}
+                        justifyContent="space-between"
+                        sx={{ minWidth: 0, flex: 1 }}
+                      >
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="subtitle1" fontWeight={700} noWrap title={item.name}>
+                            {item.name}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
                             sx={{
-                              width: 48,
-                              height: 48,
-                              borderRadius: 1,
+                              mt: 0.25,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: "vertical",
                               overflow: "hidden",
-                              bgcolor: "action.hover",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              mx: "auto",
                             }}
                           >
-                            {item.image_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={item.image_url}
-                                alt={item.name}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                              />
-                            ) : (
-                              <Typography variant="caption" color="text.secondary">
-                                —
-                              </Typography>
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell sx={{ textAlign: "left" }}>
-                          <Typography fontWeight={600}>{item.name}</Typography>
-                          {item.description && (
-                            <Typography variant="caption" color="text.secondary" noWrap display="block">
-                              {item.description}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>{item.category_name || "Chưa phân loại"}</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: "primary.main" }}>
+                            {item.description || "Chưa có mô tả"}
+                          </Typography>
+                        </Box>
+
+                        <Typography fontWeight={700} color="primary.main">
                           {Number(item.price || 0).toLocaleString("vi-VN")} đ
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={item.is_available ? "Sẵn sàng" : "Hết món"}
-                            color={item.is_available ? "success" : "warning"}
-                            size="small"
+                        </Typography>
+
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          spacing={1}
+                        >
+                          <FormControlLabel
+                            sx={{ m: 0, ".MuiFormControlLabel-label": { lineHeight: 1.1 } }}
+                            control={
+                              <Switch
+                                size="small"
+                                checked={item.is_available}
+                                onChange={() => toggleProductAvailability(item)}
+                                disabled={!canUpdateProduct || togglingProductId === item.id}
+                                inputProps={{ "aria-label": `Co the dat mon ${item.name}` }}
+                              />
+                            }
+                            label={
+                              <Typography variant="body2" color="text.secondary">
+                                Có thể đặt
+                              </Typography>
+                            }
                           />
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={0.5} justifyContent="center">
+                          <Stack direction="row" spacing={0.5}>
                             <IconButton
                               size="small"
                               onClick={() => openProductDialog(item)}
@@ -452,26 +583,13 @@ export default function ProductsPage() {
                               <IconTrash size={18} />
                             </IconButton>
                           </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination
-              component="div"
-              count={productTotal}
-              page={productPage}
-              onPageChange={(_, newPage) => setProductPage(newPage)}
-              rowsPerPage={productPageSize}
-              onRowsPerPageChange={(e) => {
-                setProductPageSize(parseInt(e.target.value, 10));
-                setProductPage(0);
-              }}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              labelRowsPerPage="Số dòng:"
-            />
+                        </Stack>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Stack>

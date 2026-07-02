@@ -193,21 +193,26 @@ function UserInfoCard() {
                 </Typography>
               )}
             </Box>
-            {isMobile && (
-              <>
-                <Divider sx={{ my: 2 }} />
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: isMobile ? "stretch" : "flex-end",
+                }}
+              >
                 <Button
                   onClick={logout}
                   variant="outlined"
                   color="error"
-                  fullWidth
+                  fullWidth={isMobile}
                   startIcon={<LogoutIcon />}
-                  sx={{ fontWeight: 600, py: 1.2 }}
+                  sx={{ fontWeight: 600, py: 1.2, minWidth: isMobile ? "100%" : 160 }}
                 >
                   Đăng xuất
                 </Button>
-              </>
-            )}
+              </Box>
+            </>
           </CardContent>
         </Card>
       </Grid>

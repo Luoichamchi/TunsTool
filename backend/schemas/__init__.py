@@ -4,3 +4,4 @@ from schemas.auth import *
 from schemas.rbac import *
 from schemas.audit_log import *
 from schemas.restaurant_ordering import *
+from schemas.revenue import *

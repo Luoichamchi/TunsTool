@@ -148,7 +148,6 @@ class OrderItem(BaseModel):
     quantity: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     subtotal: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
-    batch_no: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
 
     order: Mapped["Order"] = relationship(
         "Order",

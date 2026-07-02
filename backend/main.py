@@ -15,6 +15,7 @@ from api import (
     product,
     dining_table,
     order,
+    revenue,
     public_order,
 )
 from database.audit_event import register_audit_events
@@ -70,6 +71,7 @@ api_router.include_router(product_category.router)
 api_router.include_router(product.router)
 api_router.include_router(dining_table.router)
 api_router.include_router(order.router)
+api_router.include_router(revenue.router)
 api_router.include_router(public_order.router)
 app.include_router(api_router)
 
