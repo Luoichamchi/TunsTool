@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import mqtt from "mqtt";
+import { useTheme } from "@mui/material/styles";
 import {
   Box,
   Button,
@@ -35,6 +36,15 @@ const STATUS_MENU = [
 ];
 
 const statusKeys = STATUS_MENU.map((item) => item.key);
+
+function getGradientCardSx(theme) {
+  const isDark = theme.palette.mode === "dark";
+  return {
+    background: isDark
+      ? "linear-gradient(135deg, #1e293b 60%, #1e3a5f 100%)"
+      : "linear-gradient(135deg, #f8fafc 60%, #e3f2fd 100%)",
+  };
+}
 
 function formatOrderDateTime(value) {
   if (!value) return "—";
@@ -93,6 +103,7 @@ function playBeep() {
 }
 
 export default function OrdersPage() {
+  const theme = useTheme();
   const { tenantCode } = useTenant();
   const { mqttServer } = useRuntimeConfig();
   const [selectedStatus, setSelectedStatus] = useState("pending");
@@ -365,6 +376,7 @@ export default function OrdersPage() {
                     border: 1,
                     borderColor: "divider",
                     borderRadius: 2,
+                    ...getGradientCardSx(theme),
                   }}
                 >
                   <Box>
@@ -583,6 +595,7 @@ function groupOrdersByTable(orders) {
 }
 
 function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkTablePaid }) {
+  const theme = useTheme();
   const [showDetails, setShowDetails] = useState(false);
   const orderIds = group.orders.map((order) => order.id);
   const orderIdLabel = orderIds.map((id) => `#${id}`).join(", ");
@@ -596,7 +609,7 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
   const timerRange = getGroupTimerRange(group.orders);
 
   return (
-    <Card variant="outlined" sx={{ width: "100%" }}>
+    <Card variant="outlined" sx={{ width: "100%", ...getGradientCardSx(theme) }}>
       <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
         <Box
           sx={{
@@ -685,6 +698,7 @@ function ServedTableGroupCard({ group, tableUnpaid, onUpdateGroupStatus, onMarkT
 }
 
 function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
+  const theme = useTheme();
   const itemCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
   const detailsExpandedByDefault = order.status === "confirmed";
   const [showDetails, setShowDetails] = useState(detailsExpandedByDefault);
@@ -701,7 +715,7 @@ function OrderCard({ order, tableUnpaid, onUpdateStatus }) {
   const timerRange = getOrderTimerRange(order);
 
   return (
-    <Card variant="outlined" sx={{ width: "100%" }}>
+    <Card variant="outlined" sx={{ width: "100%", ...getGradientCardSx(theme) }}>
       <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
         <Box
           sx={{

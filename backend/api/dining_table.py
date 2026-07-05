@@ -8,11 +8,54 @@ from schemas import (
     DiningTableResponse,
     DiningTableUpdate,
     OpenTableResponse,
+    OrderResponse,
     PaginatedDiningTableResponse,
+    PublicCurrentOrderResponse,
+    PublicMenuResponse,
+    StaffOrderCreate,
 )
-from services.restaurant_ordering import DiningTableService
+from services.restaurant_ordering import DiningTableService, OrderService
 
 router = APIRouter(prefix="/dining-tables", tags=["Dining Tables"])
+
+
+@router.get("/menu", response_model=PublicMenuResponse)
+async def get_staff_order_menu(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    service = OrderService(db)
+    try:
+        return await service.get_menu_for(current_user.id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+@router.get("/{table_id}/current-order", response_model=PublicCurrentOrderResponse)
+async def get_table_current_order(
+    table_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    service = OrderService(db)
+    try:
+        return await service.get_current_order_by_table_for(current_user.id, table_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+@router.post("/{table_id}/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+async def submit_staff_table_order(
+    table_id: int,
+    payload: StaffOrderCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    service = OrderService(db)
+    try:
+        return await service.submit_staff_order_for(current_user.id, table_id, payload)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
 
 
 @router.get("/", response_model=PaginatedDiningTableResponse)

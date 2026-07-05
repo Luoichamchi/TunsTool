@@ -13,16 +13,20 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
+  IconButton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
+import { IconQrcode } from "@tabler/icons-react";
 import { QRCode } from "antd";
 import { toast } from "react-toastify";
 
 import PageContainer from "@/app/components/container/PageContainer";
+import TableOrderDialog from "@/app/components/restaurant/TableOrderDialog";
 import api from "@/app/api/api";
 import { getFetcher, postFetcher } from "@/app/api/globalFetcher";
 import { useHasPermission } from "@/app/utils/auth/useHasPermission";
@@ -35,14 +39,22 @@ function getTableCardSx(theme, isServing) {
     ? "rgba(255, 255, 255, 0.22)"
     : "rgba(15, 23, 42, 0.2)";
 
+  const baseSx = {
+    background: isDark
+      ? "linear-gradient(135deg, #1e293b 60%, #1e3a5f 100%)"
+      : "linear-gradient(135deg, #f8fafc 60%, #e3f2fd 100%)",
+  };
+
   if (isServing) {
     return {
+      ...baseSx,
       borderWidth: 2,
       borderColor: "success.main",
     };
   }
 
   return {
+    ...baseSx,
     borderWidth: 1.5,
     borderColor: defaultBorder,
   };
@@ -70,10 +82,12 @@ export default function DiningTablesPage() {
   const { tenantCode } = useTenant();
   const tableGridSize = useTableGridSize();
   const [qrDialog, setQrDialog] = useState({ open: false, item: null, qrValue: "" });
+  const [orderDialog, setOrderDialog] = useState({ open: false, item: null });
   const [openingTableId, setOpeningTableId] = useState(null);
   const [closingTableId, setClosingTableId] = useState(null);
 
   const canUpdate = useHasPermission("dining_table", "update");
+  const canCreateOrder = useHasPermission("order", "create");
 
   const url = `${api.GET_TABLE_LIST}?page=1&page_size=100`;
   const { data, mutate } = useSWR(url, getFetcher, { refreshInterval: 5000 });
@@ -154,8 +168,16 @@ export default function DiningTablesPage() {
     });
   };
 
+  const openOrderDialog = (item) => {
+    if (!item.current_session?.session_token) {
+      toast.error("Bàn chưa có phiên phục vụ");
+      return;
+    }
+    setOrderDialog({ open: true, item });
+  };
+
   return (
-    <PageContainer title="Sơ đồ bàn" description="Theo dõi trạng thái bàn, nhận/trả bàn và phát QR cho khách đặt món">
+    <PageContainer title="Sơ đồ bàn" description="Theo dõi trạng thái bàn, nhận/trả bàn, đặt món thay khách và phát QR">
       <Card variant="outlined">
         <CardContent>
           <Grid container spacing={2}>
@@ -184,11 +206,36 @@ export default function DiningTablesPage() {
                             Mã bàn: {item.table_code}
                           </Typography>
                         </Box>
-                        <Chip label={statusLabel} color={statusColor} size="small" />
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Chip label={statusLabel} color={statusColor} size="small" />
+                          {isServing ? (
+                            <Tooltip title="Xem QR">
+                              <IconButton
+                                size="medium"
+                                color="info"
+                                onClick={() => showQrForServingTable(item)}
+                                aria-label="Xem QR"
+                                sx={{ p: 0.75 }}
+                              >
+                                <IconQrcode size={24} />
+                              </IconButton>
+                            </Tooltip>
+                          ) : null}
+                        </Stack>
                       </Stack>
-                      <Stack spacing={1} mt={1.5}>
+                      <Stack spacing={1} mt={1.5} minHeight={36}>
                         {!item.is_active ? null : isServing ? (
                           <Stack direction="row" spacing={1}>
+                            {canCreateOrder ? (
+                              <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={() => openOrderDialog(item)}
+                                sx={{ flex: 1 }}
+                              >
+                                Đặt món
+                              </Button>
+                            ) : null}
                             <Button
                               variant="contained"
                               color="warning"
@@ -198,18 +245,11 @@ export default function DiningTablesPage() {
                             >
                               {closingTableId === item.id ? "Đang trả..." : "Trả bàn"}
                             </Button>
-                            <Button
-                              variant="contained"
-                              color="info"
-                              onClick={() => showQrForServingTable(item)}
-                              sx={{ flex: 1, color: "common.white" }}
-                            >
-                              Xem QR
-                            </Button>
                           </Stack>
                         ) : (
                           <Button
                             variant="outlined"
+                            fullWidth
                             onClick={() => openTable(item)}
                             disabled={!canUpdate || openingTableId === item.id}
                           >
@@ -238,7 +278,7 @@ export default function DiningTablesPage() {
             <Stack spacing={2} alignItems="center" mt={1}>
               <Typography fontWeight={700}>{qrDialog.item.name}</Typography>
               <Typography variant="body2" color="text.secondary" textAlign="center">
-                Khách quét mã này để đặt món. QR chỉ có hiệu lực trong phiên hiện tại.
+                Khách quét mã này để tự đặt món. Nhân viên cũng có thể bấm &quot;Đặt món&quot; trên sơ đồ bàn nếu khách không quét QR.
               </Typography>
               <QRCode value={qrDialog.qrValue} size={220} />
               <TextField fullWidth value={qrDialog.qrValue} InputProps={{ readOnly: true }} />
@@ -249,6 +289,13 @@ export default function DiningTablesPage() {
           <Button onClick={() => setQrDialog({ open: false, item: null, qrValue: "" })}>Đóng</Button>
         </DialogActions>
       </Dialog>
+
+      <TableOrderDialog
+        open={orderDialog.open}
+        table={orderDialog.item}
+        onClose={() => setOrderDialog({ open: false, item: null })}
+        onOrderSubmitted={() => mutate()}
+      />
     </PageContainer>
   );
 }

@@ -135,64 +135,6 @@ function UserInfoCard() {
                 </Stack>
               </Box>
             </Box>
-            <Divider sx={{ mb: 2 }} />
-            <Box>
-              <Typography fontWeight={600} mb={1} color="primary">
-                Quyền hạn:
-              </Typography>
-              {user.permissions && typeof user.permissions === "object" ? (
-                <Box sx={{ background: "#f5f5f5", p: 2, borderRadius: 2 }}>
-                  <Grid container flexDirection={"column"} spacing={2}>
-                    {Object.entries(user.permissions).map(([module, perms]) => (
-                      <Grid item xs={12} sm={6} md={4} key={module}>
-                        <Typography
-                          variant="subtitle2"
-                          color="primary"
-                          fontWeight={600}
-                          mb={0.5}
-                          sx={{ letterSpacing: 1 }}
-                        >
-                          {module.toUpperCase()}
-                        </Typography>
-                        <Stack
-                          direction="row"
-                          flexWrap="wrap"
-                          gap={1.2}
-                          mt={1}
-                          useFlexGap
-                        >
-                          {Array.isArray(perms) && perms.length > 0 ? (
-                            perms.map((perm) => (
-                              <Chip
-                                key={perm}
-                                label={perm.replace(module + ".", "• ")}
-                                color="info"
-                                size="small"
-                                sx={{
-                                  borderRadius: 2,
-                                  fontWeight: 500,
-                                  letterSpacing: 0.2,
-                                  bgcolor: "#e3f2fd",
-                                  color: "#1976d2",
-                                  px: 1.5,
-                                  mb: 0.5,
-                                }}
-                              />
-                            ))
-                          ) : (
-                            <Chip label="Không có quyền" size="small" />
-                          )}
-                        </Stack>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-              ) : (
-                <Typography color="text.secondary">
-                  Không có quyền hạn.
-                </Typography>
-              )}
-            </Box>
             <>
               <Divider sx={{ my: 2 }} />
               <Box

@@ -34,6 +34,7 @@ from schemas import (
     PublicMenuResponse,
     PublicOrderCreate,
     PublicTableResponse,
+    StaffOrderCreate,
     TablePaymentResponse,
     TableSessionResponse,
 )
@@ -737,13 +738,26 @@ class OrderService:
         return PublicMenuResponse(categories=payload)
 
     async def submit_public_order(self, payload: PublicOrderCreate) -> OrderResponse:
-        if not payload.items:
+        session = await self._get_active_session(payload.session_token)
+        return await self._create_order(session, payload.note, payload.items)
+
+    async def _create_order(
+        self,
+        session: TableSession,
+        note: Optional[str],
+        items: list,
+    ) -> OrderResponse:
+        if not items:
             raise HTTPException(status_code=400, detail="Giỏ hàng đang trống")
 
-        session = await self._get_active_session(payload.session_token)
         table = session.table
+        if not table:
+            table_service = DiningTableService(self.db)
+            table = await table_service.get_by_id(session.table_id)
+        if not table or not table.is_active:
+            raise HTTPException(status_code=404, detail="Table not found")
 
-        product_ids = [item.product_id for item in payload.items]
+        product_ids = [item.product_id for item in items]
         products_result = await self.db.execute(
             select(Product).where(Product.id.in_(product_ids))
         )
@@ -762,13 +776,13 @@ class OrderService:
             status="pending",
             is_paid=False,
             total_amount=_decimal_zero(),
-            note=payload.note,
+            note=note,
         )
         self.db.add(order)
         await self.db.flush()
 
         added_total = _decimal_zero()
-        for item in payload.items:
+        for item in items:
             product = products[item.product_id]
             subtotal = Decimal(product.price) * Decimal(item.quantity)
             added_total += subtotal
@@ -790,6 +804,46 @@ class OrderService:
         order = await self._load_order(order_id)
         self.publish_event("order_created", order)
         return self._to_response(order)
+
+    async def submit_staff_order_for(
+        self, user_id: int, table_id: int, payload: StaffOrderCreate
+    ) -> OrderResponse:
+        await ensure_permission_global(self.db, user_id, "order", "create")
+        table_service = DiningTableService(self.db)
+        session = await table_service._get_active_session_for_table(table_id)
+        if not session:
+            raise HTTPException(
+                status_code=400,
+                detail="Bàn chưa được nhận hoặc phiên đã kết thúc",
+            )
+        loaded_session = await table_service.get_session_by_token(session.session_token)
+        if not loaded_session:
+            raise HTTPException(status_code=400, detail="Phiên không hợp lệ")
+        return await self._create_order(loaded_session, payload.note, payload.items)
+
+    async def get_current_order_by_table_for(
+        self, user_id: int, table_id: int
+    ) -> PublicCurrentOrderResponse:
+        await ensure_permission_global(self.db, user_id, "dining_table", "view")
+        table_service = DiningTableService(self.db)
+        table = await table_service.get_by_id(table_id)
+        if not table:
+            raise HTTPException(status_code=404, detail="Table not found")
+        session = await table_service._get_active_session_for_table(table_id)
+        if not session:
+            return PublicCurrentOrderResponse()
+        orders = await self._get_open_orders_by_table(table_id)
+        order_responses = [self._to_response(order) for order in orders]
+        total_amount = sum((Decimal(order.total_amount) for order in orders), _decimal_zero())
+        return PublicCurrentOrderResponse(
+            orders=order_responses,
+            total_amount=total_amount,
+            order_count=len(order_responses),
+        )
+
+    async def get_menu_for(self, user_id: int) -> PublicMenuResponse:
+        await ensure_permission_global(self.db, user_id, "order", "create")
+        return await self.get_public_menu()
 
     def publish_event(self, event_name: str, order: Order) -> None:
         tenant_code = current_tenant_code.get() or ""

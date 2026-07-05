@@ -202,6 +202,11 @@ class PublicOrderCreate(BaseModel):
     items: List[PublicOrderItemCreate]
 
 
+class StaffOrderCreate(BaseModel):
+    note: Optional[str] = None
+    items: List[PublicOrderItemCreate]
+
+
 class PublicTableResponse(BaseModel):
     id: int
     table_code: str

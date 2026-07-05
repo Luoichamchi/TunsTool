@@ -58,3 +58,5 @@ Use skills in `.agents/skills/` — each contains `SKILL.md` (step-by-step guide
 ## Production
 
 See [Readme-dockerfile.md](Readme-dockerfile.md) and `docker-compose.prod.yml`.
+
+Triển khai lên VPS bằng 1Panel + domain: xem [Readme-1panel.md](Readme-1panel.md).
