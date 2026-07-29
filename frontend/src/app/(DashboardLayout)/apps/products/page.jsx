@@ -36,6 +36,7 @@ import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 
 import PageContainer from "@/app/components/container/PageContainer";
+import TablesPage from "@/app/(DashboardLayout)/apps/tables/page";
 import api from "@/app/api/api";
 import {
   deleteFetcher,
@@ -114,6 +115,7 @@ function toProductUpdateFormData(item, overrides = {}) {
 }
 
 export default function ProductsPage() {
+  const [mainTab, setMainTab] = useState("category");
   const [categorySearch, setCategorySearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [categoryPage, setCategoryPage] = useState(0);
@@ -303,8 +305,19 @@ export default function ProductsPage() {
   };
 
   return (
-    <PageContainer title="Quản lý hàng hoá" description="Quản lý loại mặt hàng, mặt hàng, ảnh và giá tiền">
+    <PageContainer title="Quản lý nhà hàng" description="Quản lý loại mặt hàng, mặt hàng, ảnh, giá tiền và bàn ăn">
       <Stack spacing={3}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs value={mainTab} onChange={(_, newValue) => setMainTab(newValue)}>
+            <Tab value="category" label="Loại mặt hàng" />
+            <Tab value="product" label="Mặt hàng" />
+            <Tab value="tables" label="Bàn ăn" />
+          </Tabs>
+        </Box>
+
+        {mainTab === "tables" && <TablesPage />}
+
+        {mainTab === "category" && (
         <Card variant="outlined">
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
@@ -414,7 +427,9 @@ export default function ProductsPage() {
             />
           </CardContent>
         </Card>
+        )}
 
+        {mainTab === "product" && (
         <Card variant="outlined">
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
@@ -592,6 +607,7 @@ export default function ProductsPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </Stack>
 
       <Dialog open={categoryDialog.open} onClose={closeCategoryDialog} fullWidth maxWidth="sm">

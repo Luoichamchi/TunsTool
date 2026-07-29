@@ -68,12 +68,6 @@ const DRAWER_MENU_ITEMS = [
     permission: "revenue.view",
   },
   {
-    titleKey: "TableManagement",
-    icon: IconPackage,
-    href: "/apps/tables",
-    permission: "dining_table.view",
-  },
-  {
     titleKey: "UserManagement",
     icon: IconUsers,
     href: "/systems/user-management",

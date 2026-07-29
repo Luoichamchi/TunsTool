@@ -47,14 +47,6 @@ const Menuitems = [
     permission: "revenue.view",
   },
   {
-    id: uniqueId(),
-    title: "TableManagement",
-    icon: IconPackage,
-    chipColor: "secondary",
-    href: "/apps/tables",
-    permission: "dining_table.view",
-  },
-  {
     navlabel: true,
     subheader: "System",
   },

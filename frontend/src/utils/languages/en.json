@@ -41,9 +41,8 @@
     "Clear All Settings & Reload": "Clear All Settings & Reload",
     "TenantManagement": "Tenant Management",
     "Station Data": "Station Data",
-    "ProductManagement": "Product Management",
+    "ProductManagement": "Restaurant Management",
     "RevenueReport": "Revenue Report",
-    "TableManagement": "Table Management",
     "DiningTables": "Table Floor",
     "OrderManagement": "Order Management"
 }
